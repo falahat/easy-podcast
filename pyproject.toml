@@ -36,9 +36,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-transcribe = [
-    "easy-whisperx@git+https://github.com/falahat/easy-whisperx.git",
-]
 dev = [
     "pytest>=6.0.0",
     "pytest-cov>=2.0.0",
