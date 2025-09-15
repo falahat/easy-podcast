@@ -1,6 +1,6 @@
-# Podcast Tracker
+# Easy Podcast
 
-A modular Python package for downloading podcast episodes from RSS feeds and transcribing them using AI. Features progress tracking, metadata management, duplicate detection, and WhisperX-powered transcription with speaker diarization.
+A modular Python package for downloading podcast episodes from RSS feeds. Features progress tracking, metadata management, and duplicate detection.
 
 ## Python Version Requirements
 
@@ -11,7 +11,6 @@ A modular Python package for downloading podcast episodes from RSS feeds and tra
 - **RSS Feed Parsing**: Download and parse podcast RSS feeds
 - **Episode Management**: Track downloaded episodes with JSONL metadata
 - **Progress Tracking**: Visual progress bars for downloads
-- **AI Transcription**: WhisperX-powered transcription with speaker diarization
 - **Duplicate Detection**: Automatically skip already downloaded episodes
 - **Type Safety**: Comprehensive type hints throughout
 
@@ -20,25 +19,17 @@ A modular Python package for downloading podcast episodes from RSS feeds and tra
 ### Standard Installation
 
 ```bash
-git clone https://github.com/falahat/podcast.git
-cd podcast
+git clone https://github.com/falahat/easy-podcast.git
+cd easy-podcast
 pip install -e .
-```
-
-### Installation with Transcription Support
-
-```bash
-git clone https://github.com/falahat/podcast.git
-cd podcast
-pip install -e .[transcribe]
 ```
 
 ### Development Installation
 
 ```bash
-git clone https://github.com/falahat/podcast.git
-cd podcast
-pip install -e .[dev,notebook,transcribe]
+git clone https://github.com/falahat/easy-podcast.git
+cd easy-podcast
+pip install -e .[dev,notebook]
 ```
 
 ## Quick Start
@@ -47,16 +38,16 @@ pip install -e .[dev,notebook,transcribe]
 
 ```bash
 # Download episodes from an RSS feed
-podcast_downloader "https://example.com/podcast/rss.xml"
+easy_podcast "https://example.com/podcast/rss.xml"
 
 # Specify custom data directory  
-podcast_downloader "https://example.com/podcast/rss.xml" --data-dir ./my_podcasts
+easy_podcast "https://example.com/podcast/rss.xml" --data-dir ./my_podcasts
 
 # List episodes without downloading
-podcast_downloader "https://example.com/podcast/rss.xml" --list-only
+easy_podcast "https://example.com/podcast/rss.xml" --list-only
 
 # Disable progress bars
-podcast_downloader "https://example.com/podcast/rss.xml" --no-progress
+easy_podcast "https://example.com/podcast/rss.xml" --no-progress
 ```
 
 ### Python API
@@ -92,61 +83,6 @@ if manager:
     manager.download_episodes(new_episodes)
 ```
 
-## Audio Transcription
-
-The package includes AI-powered audio transcription using WhisperX with GPU acceleration and speaker diarization. Transcription functionality is available as an optional dependency.
-
-**Installation**: To use transcription features, install with the `[transcribe]` option:
-```bash
-pip install -e .[transcribe]
-```
-
-### Prerequisites for Transcription
-
-1. **NVIDIA GPU** with CUDA support
-2. **Hugging Face Token** (for speaker diarization models)
-3. **PyTorch with GPU support** (automatically installed with easy-whisperx)
-
-**Note**: PyTorch is automatically installed as part of the `easy-whisperx` dependency. No manual installation required.
-
-### Setting up Transcription Environment
-
-1. **Get a Hugging Face Token**:
-   - Go to [Hugging Face Settings](https://huggingface.co/settings/tokens)
-   - Create a token with "read" permissions
-   - Accept user agreements for segmentation and diarization models
-
-2. **Set Environment Variable**:
-
-   ```powershell
-   # Windows PowerShell
-   $env:HF_TOKEN="your_token_here"
-   ```
-
-   ```bash
-   # Linux/macOS
-   export HF_TOKEN="your_token_here"
-   ```
-
-### Using Transcription in Python
-
-```python
-from easy_whisperx.transcriber import Transcriber
-
-# Initialize transcriber
-transcriber = Transcriber(
-    model_size="base",
-    device="cuda",  # or "cpu"
-    compute_type="float16",
-    batch_size=16
-)
-
-# Transcribe audio file
-with transcriber:
-    result = transcriber("path/to/audio.mp3")
-    print(result["text"])
-```
-
 ## Data Storage Structure
 
 Podcast data is organized in a clear directory structure:
@@ -169,8 +105,8 @@ data/
 ### Setting up Development Environment
 
 ```bash
-git clone https://github.com/falahat/podcast.git
-cd podcast
+git clone https://github.com/falahat/easy-podcast.git
+cd easy-podcast
 
 # Create virtual environment (note the .venv name)
 python -m venv .venv
@@ -227,7 +163,6 @@ The package is built with a modular architecture:
 - **`EpisodeTracker`** - JSONL-based metadata persistence
 - **`PodcastParser`** - RSS feed parsing with custom episode ID extraction
 - **`PodcastDownloader`** - HTTP downloads with progress tracking
-- **`Transcription`** - WhisperX-based transcription module
 
 ## Contributing
 

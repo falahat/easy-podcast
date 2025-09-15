@@ -7,7 +7,7 @@ easy_podcast = "easy_podcast.cli:main"
 
 [project]
 name = "easy-podcast"
-version = "0.0.1"
+version = "0.0.2"
 description = "A modular podcast episode downloader with RSS feed parsing and progress tracking"
 authors = [
     {name = "Aryan Falahtpisheh", email = "aryanfalahat@gmail.com"},
@@ -45,6 +45,9 @@ dev = [
     "coverage",
     "types-requests",
     "types-tqdm",
+]
+transcribe = [
+    "easy-whisperx"
 ]
 notebook = [
     "jupyter>=1.0.0",
