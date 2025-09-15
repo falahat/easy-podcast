@@ -7,7 +7,7 @@ easy_podcast = "easy_podcast.cli:main"
 
 [project]
 name = "easy-podcast"
-version = "0.0.2"
+version = "0.0.3"
 description = "A modular podcast episode downloader with RSS feed parsing and progress tracking"
 authors = [
     {name = "Aryan Falahtpisheh", email = "aryanfalahat@gmail.com"},
