@@ -87,6 +87,10 @@ class PodcastParser:
         podcast_title = feed_info.get("title", "Unknown Podcast")
         safe_title = sanitize_filename(podcast_title)
 
+        # Create a GUID for the podcast - use RSS URL as a unique identifier
+        # In the future, this could be extracted from feed metadata
+        podcast_guid = rss_url
+
         self.logger.debug(
             "Creating podcast: '%s' (safe: '%s')", podcast_title, safe_title
         )
@@ -95,6 +99,7 @@ class PodcastParser:
             title=podcast_title,
             rss_url=rss_url,
             safe_title=safe_title,
+            guid=podcast_guid,
         )
 
         feed_entries = getattr(feed_data, "entries", [])
@@ -117,10 +122,18 @@ class PodcastParser:
         self, entry: Dict[str, Any]
     ) -> Optional[Episode]:
         """Convert feed entry to Episode object."""
+        # Extract both the supercast ID (for backward compatibility)
+        # and the RSS standard GUID
         episode_id = entry.get("supercast_episode_id")
+        episode_guid = entry.get("guid", "")
+        
+        # If we don't have a supercast ID, try to use the GUID as ID
+        if not episode_id:
+            episode_id = episode_guid
+            
         if not episode_id:
             self.logger.debug(
-                "Skipping entry without supercast_episode_id: %s",
+                "Skipping entry without episode ID or GUID: %s",
                 entry.get("title", "Unknown"),
             )
             return None
@@ -154,4 +167,5 @@ class PodcastParser:
             ),
             audio_link=audio_url,
             size=audio_size,
+            guid=episode_guid,  # Add the GUID field
         )

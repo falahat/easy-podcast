@@ -42,9 +42,13 @@ class TestPodcastManagerRSS(PodcastTestBase):
             self.assertEqual(podcast.title, "Test Podcast")
             self.assertEqual(len(podcast.episodes), 1)
 
-            self.assertIsNotNone(manager.downloads_dir)
-            self.assertIsNotNone(manager.episode_tracker)
-            self.assertTrue(os.path.exists(manager.downloads_dir))
+            self.assertIsNotNone(manager.path_manager)
+            self.assertIsNotNone(manager.storage_manager)
+            # Check that podcast directory exists
+            podcast_dir = manager.path_manager.get_podcast_dir(
+                manager.podcast.guid
+            )
+            self.assertTrue(os.path.exists(podcast_dir))
 
     @patch("easy_podcast.parser.PodcastParser.from_rss_url")
     def test_ingest_rss_data_failure(
@@ -118,8 +122,12 @@ class TestPodcastManagerRSS(PodcastTestBase):
         self.assertIsNotNone(manager)
         # Check that the directory path was created successfully
         if manager:
-            self.assertIsNotNone(manager.downloads_dir)
-            self.assertTrue(os.path.exists(manager.downloads_dir))
+            self.assertIsNotNone(manager.path_manager)
+            # Check that podcast directory exists
+            podcast_dir = manager.path_manager.get_podcast_dir(
+                manager.podcast.guid
+            )
+            self.assertTrue(os.path.exists(podcast_dir))
 
     @patch("easy_podcast.parser.PodcastParser.from_rss_url")
     def test_rss_content_saved_to_file(

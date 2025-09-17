@@ -130,6 +130,55 @@ class TestPodcast(unittest.TestCase):
         self.assertEqual(episode.id, "456")
         self.assertEqual(episode.duration_seconds, 3600)
 
+    def test_podcast_serialization(self) -> None:
+        """Test Podcast to_json and from_dict methods."""
+        podcast = Podcast(
+            title="Test Podcast",
+            rss_url="http://test.com/rss",
+            safe_title="Test_Podcast",
+            guid="test-podcast-guid",
+        )
+
+        # Test to_json
+        json_str = podcast.to_json()
+        self.assertIsInstance(json_str, str)
+        self.assertIn("Test Podcast", json_str)
+        self.assertIn("test-podcast-guid", json_str)
+
+        # Test from_dict
+        podcast_dict = json.loads(json_str)
+        restored_podcast = Podcast.from_dict(podcast_dict)
+        
+        self.assertEqual(restored_podcast.title, "Test Podcast")
+        self.assertEqual(restored_podcast.rss_url, "http://test.com/rss")
+        self.assertEqual(restored_podcast.safe_title, "Test_Podcast")
+        self.assertEqual(restored_podcast.guid, "test-podcast-guid")
+        self.assertEqual(len(restored_podcast.episodes), 0)
+
+    def test_podcast_serialization_with_episodes(self) -> None:
+        """Test Podcast serialization with episodes."""
+        episode = create_test_episode(
+            id="123",
+            size=1000,
+            audio_link="http://test.com/123.mp3",
+        )
+        
+        podcast = Podcast(
+            title="Test Podcast",
+            rss_url="http://test.com/rss",
+            safe_title="Test_Podcast",
+            episodes=[episode],
+            guid="test-podcast-guid",
+        )
+
+        # Test serialization round-trip
+        podcast_dict = json.loads(podcast.to_json())
+        restored_podcast = Podcast.from_dict(podcast_dict)
+        
+        self.assertEqual(len(restored_podcast.episodes), 1)
+        self.assertEqual(restored_podcast.episodes[0].id, "123")
+        self.assertEqual(restored_podcast.episodes[0].size, 1000)
+
 
 if __name__ == "__main__":
     unittest.main()

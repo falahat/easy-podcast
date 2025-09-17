@@ -36,8 +36,8 @@ class TestPodcastManagerInitialization(PodcastTestBase):
         # Config should be set to the test directory
         self.assertEqual(get_config().base_data_dir, self.test_dir)
         self.assertIsNotNone(manager.podcast)
-        self.assertIsNotNone(manager.episode_tracker)
-        self.assertIsNotNone(manager.downloads_dir)
+        self.assertIsNotNone(manager.storage_manager)
+        self.assertIsNotNone(manager.path_manager)
         self.assertEqual(manager.podcast.title, "Test Podcast")
 
     def test_from_podcast_folder_success(self) -> None:
@@ -63,6 +63,12 @@ class TestPodcastManagerInitialization(PodcastTestBase):
         rss_file_path = os.path.join(test_podcast_dir, "rss.xml")
         with open(rss_file_path, "wb") as f:
             f.write(rss_content)
+        
+        # Create empty episodes.jsonl to make it detected as old-style storage
+        episodes_jsonl_path = os.path.join(test_podcast_dir, "episodes.jsonl")
+        with open(episodes_jsonl_path, "w", encoding="utf-8") as f:
+            # Empty file to trigger old-style storage detection
+            pass
 
         # Test the from_podcast_folder method
         manager = PodcastManager.from_podcast_folder(test_podcast_dir)
@@ -88,10 +94,13 @@ class TestPodcastManagerInitialization(PodcastTestBase):
                 "Test Episode from Folder",
                 "Episode title should match",
             )
-            # Verify downloads directory exists
+            # Verify podcast directory structure exists
+            podcast_dir = manager.path_manager.get_podcast_dir(
+                manager.podcast.guid
+            )
             self.assertTrue(
-                os.path.exists(manager.downloads_dir),
-                "Downloads directory should exist",
+                os.path.exists(podcast_dir),
+                "Podcast directory should exist",
             )
 
     def test_from_podcast_folder_missing_rss_file(self) -> None:
@@ -121,6 +130,12 @@ class TestPodcastManagerInitialization(PodcastTestBase):
         rss_file_path = os.path.join(test_podcast_dir, "rss.xml")
         with open(rss_file_path, "wb") as f:
             f.write(malformed_xml)
+        
+        # Create empty episodes.jsonl to make it detected as old-style storage
+        episodes_jsonl_path = os.path.join(test_podcast_dir, "episodes.jsonl")
+        with open(episodes_jsonl_path, "w", encoding="utf-8") as f:
+            # Empty file to trigger old-style storage detection
+            pass
 
         # Test the from_podcast_folder method
         with self.assertRaises(ValueError) as context:
@@ -148,6 +163,12 @@ class TestPodcastManagerInitialization(PodcastTestBase):
         rss_file_path = os.path.join(test_podcast_dir, "rss.xml")
         with open(rss_file_path, "wb") as f:
             f.write(b"<rss><channel><title>Test</title></channel></rss>")
+        
+        # Create empty episodes.jsonl to make it detected as old-style storage
+        episodes_jsonl_path = os.path.join(test_podcast_dir, "episodes.jsonl")
+        with open(episodes_jsonl_path, "w", encoding="utf-8") as f:
+            # Empty file to trigger old-style storage detection
+            pass
 
         # Mock parse_from_file to return None (simulating parse failure)
         # Note: parse_from_file catches all exceptions and returns None
@@ -214,6 +235,12 @@ class TestPodcastManagerInitialization(PodcastTestBase):
         rss_file_path = os.path.join(test_podcast_dir, "rss.xml")
         with open(rss_file_path, "wb") as f:
             f.write(rss_content)
+        
+        # Create empty episodes.jsonl to make it detected as old-style storage
+        episodes_jsonl_path = os.path.join(test_podcast_dir, "episodes.jsonl")
+        with open(episodes_jsonl_path, "w", encoding="utf-8") as f:
+            # Empty file to trigger old-style storage detection
+            pass
 
         # Mock parse_from_file to return None (simulating parse failure)
         mock_parse_from_file.return_value = None
@@ -240,6 +267,12 @@ class TestPodcastManagerInitialization(PodcastTestBase):
         rss_file_path = os.path.join(test_podcast_dir, "rss.xml")
         with open(rss_file_path, "wb") as f:
             f.write(rss_content)
+        
+        # Create empty episodes.jsonl to make it detected as old-style storage
+        episodes_jsonl_path = os.path.join(test_podcast_dir, "episodes.jsonl")
+        with open(episodes_jsonl_path, "w", encoding="utf-8") as f:
+            # Empty file to trigger old-style storage detection
+            pass
 
         # Test the from_podcast_folder method
         manager = PodcastManager.from_podcast_folder(test_podcast_dir)
