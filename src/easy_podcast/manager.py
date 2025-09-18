@@ -6,12 +6,11 @@ import logging
 import os
 from typing import List, Optional, Tuple
 
-from .config import get_config
+from .path_manager import PathManager, get_base_data_dir
 from .downloader import download_episode_file
 from .mapping_manager import MappingManager
 from .models import Episode, Podcast
 from .parser import PodcastParser
-from .path_manager import PathManager
 from .storage_manager import StorageManager
 
 
@@ -92,119 +91,65 @@ class PodcastManager:
         return os.path.exists(transcript_path)
 
     def get_existing_episode_ids(self) -> set[str]:
-        """Get set of existing episode IDs by checking for metadata files."""
-        existing_ids: set[str] = set()
-        podcast_dir = self.path_manager.get_podcast_dir(self.podcast.guid)
-        
-        if not os.path.exists(podcast_dir):
-            return existing_ids
-            
-        # Check each subdirectory for metadata.json files
-        for item in os.listdir(podcast_dir):
-            item_path = os.path.join(podcast_dir, item)
-            if os.path.isdir(item_path):
-                metadata_file = os.path.join(
-                    item_path, self.path_manager.EPISODE_METADATA_FILE
-                )
-                if os.path.exists(metadata_file):
-                    try:
-                        # Read the metadata file directly to get episode ID
-                        import json
-                        with open(metadata_file, "r", encoding="utf-8") as f:
-                            episode_data = json.load(f)
-                            if "id" in episode_data:
-                                existing_ids.add(episode_data["id"])
-                    except Exception:  # pylint: disable=broad-except
-                        # Skip invalid metadata files
-                        continue
-                        
-        return existing_ids
+        """Get set of existing episode IDs using StorageManager."""
+        episodes = self.storage_manager.list_podcast_episodes(
+            self.podcast.guid
+        )
+        return {episode.id for episode in episodes}
 
     def get_podcast(self) -> Podcast:
         """Get currently loaded podcast."""
         return self.podcast
 
-    @staticmethod
-    def from_podcast_folder(
-        podcast_data_dir: str,
-    ) -> Optional["PodcastManager"]:
-        """
-        Create a manager from a folder with RSS and episode data.
-        
-        This method handles both old flat storage and new nested storage.
-        For old storage, it will load from episodes.jsonl and rss.xml.
-        For new storage, it will load from the nested structure.
-        """
-        logger = logging.getLogger(__name__)
-        logger.info("Loading podcast data from folder: %s", podcast_data_dir)
-
-        # Convert to absolute path for clearer logging
-        abs_podcast_data_dir = os.path.abspath(podcast_data_dir)
-        logger.info(
-            "Absolute podcast data directory: %s", abs_podcast_data_dir
-        )
-
-        # Check if this is old-style storage (has episodes.jsonl)
-        episodes_jsonl_path = os.path.join(podcast_data_dir, "episodes.jsonl")
-        rss_file_path = os.path.join(podcast_data_dir, "rss.xml")
-
-        if os.path.exists(episodes_jsonl_path):
-            logger.info("Detected old-style storage, loading from JSONL")
-            return PodcastManager._load_from_old_storage(
-                podcast_data_dir, rss_file_path
-            )
-        else:
-            logger.error(
-                "New-style storage loading not yet implemented. "
-                "Use migration utilities to convert old storage first."
-            )
-            return None
+    def get_podcast_data_dir(self) -> str:
+        """Get the data directory for this podcast."""
+        return self.path_manager.get_podcast_dir(self.podcast.guid)
 
     @staticmethod
-    def _load_from_old_storage(
-        podcast_data_dir: str, rss_file_path: str
-    ) -> Optional["PodcastManager"]:
-        """Load podcast from old JSONL-based storage."""
+    def from_existing_storage(podcast_guid: str) -> Optional["PodcastManager"]:
+        """Load podcast from existing new storage format."""
         logger = logging.getLogger(__name__)
-        
-        logger.debug("Looking for RSS file at: %s", rss_file_path)
+        logger.info("Loading podcast from storage: %s", podcast_guid)
 
-        if not os.path.exists(rss_file_path):
-            logger.error("RSS file not found: %s", rss_file_path)
-            return None
-
-        logger.info("Found RSS file: %s", rss_file_path)
-
-        # Parse RSS file
-        logger.info("Parsing RSS file...")
-        parser = PodcastParser()
-        podcast = parser.from_file("", rss_file_path)
-        if not podcast:
-            logger.error("Failed to parse RSS file: %s", rss_file_path)
-            return None
-
-        logger.info(
-            "Successfully parsed podcast: '%s' (safe_title: '%s')",
-            podcast.title,
-            podcast.safe_title,
-        )
-
-        # For old storage, we need to determine the base data directory
-        # The podcast_data_dir is the old podcast folder
-        # We need its parent directory as the base data directory
-        base_data_dir = os.path.dirname(podcast_data_dir)
-
-        # Create PodcastManager instance with new storage system
         try:
-            manager = PodcastManager(base_data_dir, podcast)
+            # Get base data directory and set up storage components
+            base_data_dir = get_base_data_dir()
+            mapping_manager = MappingManager(base_data_dir)
+            path_manager = PathManager(base_data_dir, mapping_manager)
+            storage_manager = StorageManager(path_manager)
+
+            # Load podcast metadata
+            podcast = storage_manager.load_podcast_metadata(podcast_guid)
+            if not podcast:
+                logger.error("Podcast not found in storage: %s", podcast_guid)
+                return None
+
+            # Load existing episodes from storage (individual episode files)
+            episodes = storage_manager.list_podcast_episodes(podcast_guid)
+            
+            # If no individual episode files found, use episodes from metadata
+            if episodes:
+                podcast.episodes = episodes
+            else:
+                logger.info(
+                    "No individual episode files found, "
+                    "using episodes from podcast metadata"
+                )
+
             logger.info(
-                "Successfully created PodcastManager for podcast '%s' from %s",
+                "Loaded podcast '%s' with %d episodes from storage",
                 podcast.title,
-                podcast_data_dir,
+                len(podcast.episodes),
             )
+
+            # Create PodcastManager instance
+            manager = PodcastManager(base_data_dir, podcast)
             return manager
+        except ValueError as e:
+            logger.error("Invalid GUID or missing podcast: %s", e)
+            return None
         except Exception as e:  # pylint: disable=broad-except
-            logger.error("Failed to create PodcastManager: %s", e)
+            logger.error("Failed to load podcast from storage: %s", e)
             return None
 
     @staticmethod
@@ -213,12 +158,21 @@ class PodcastManager:
         logger = logging.getLogger(__name__)
         logger.info("Creating PodcastManager from RSS URL: %s", rss_url)
 
-        # Use PodcastParser to download and parse RSS
+        # Import here to avoid circular dependency
+        from .downloader import download_rss_from_url
+
+        # Download RSS content
+        rss_content = download_rss_from_url(rss_url)
+        if not rss_content:
+            logger.error("Failed to download RSS content from %s", rss_url)
+            return None
+
+        # Parse RSS content
         parser = PodcastParser()
-        podcast = parser.from_rss_url(rss_url)
+        podcast = parser.from_content(rss_url, rss_content)
 
         if not podcast:
-            logger.error("Failed to download and parse RSS from URL")
+            logger.error("Failed to parse RSS from URL")
             return None
 
         logger.info(
@@ -228,17 +182,16 @@ class PodcastManager:
         )
 
         # Set up data directory structure using new storage system
-        config = get_config()
-        base_data_dir = config.base_data_dir  # Use the base data directory
-        
+        base_data_dir = get_base_data_dir()
         logger.info("Base data directory: %s", base_data_dir)
 
         # Create PodcastManager instance with new storage system
         try:
             manager = PodcastManager(base_data_dir, podcast)
             
-            # Save podcast metadata in new format
+            # Save podcast metadata and RSS cache in new format
             manager.storage_manager.save_podcast_metadata(podcast)
+            manager.storage_manager.save_rss_cache(podcast.guid, rss_content)
             
             logger.info(
                 "Successfully created PodcastManager for '%s' from RSS URL",

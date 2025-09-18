@@ -5,8 +5,8 @@ Command-line interface for the podcast downloader.
 import argparse
 import sys
 
-from .config import get_config, set_base_data_dir
 from .manager import PodcastManager
+from .path_manager import set_base_data_dir
 from .utils import format_bytes
 
 
@@ -47,11 +47,7 @@ def main() -> None:
             sys.exit(1)
 
         podcast = manager.podcast
-
-        config = get_config()
-        podcast_data_dir = config.get_podcast_data_dir_from_safe_title(
-            podcast.safe_title
-        )
+        podcast_data_dir = manager.get_podcast_data_dir()
 
         print(f"Podcast: {podcast.title}")
         print(f"Data directory: {podcast_data_dir}")
@@ -77,9 +73,7 @@ def main() -> None:
 
         # Download episodes
         print("\nDownloading episodes...")
-        result = manager.download_episodes(
-            new_episodes, show_progress=not args.no_progress
-        )
+        result = manager.download_episodes(new_episodes)
         successful_count, skipped_count, failed_count = result
 
         print("\nDownload complete:")

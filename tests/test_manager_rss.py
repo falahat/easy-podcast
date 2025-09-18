@@ -3,6 +3,7 @@ Tests for PodcastManager RSS handling functionality.
 """
 
 import os
+from typing import Any, Dict, List
 from unittest.mock import Mock, patch
 
 from easy_podcast.manager import PodcastManager
@@ -15,11 +16,27 @@ from tests.utils import create_test_episode
 class TestPodcastManagerRSS(PodcastTestBase):
     """Test suite for PodcastManager RSS handling functionality."""
 
-    @patch("easy_podcast.parser.PodcastParser.from_rss_url")
+    @patch("easy_podcast.parser.PodcastParser.from_content")
+    @patch("easy_podcast.downloader.download_rss_from_url")
     def test_ingest_rss_data_success(
-        self, mock_parser_from_rss_url: Mock
+        self, mock_download_rss: Mock, mock_parse_content: Mock
     ) -> None:
         """Test successful RSS ingestion using static method."""
+        # Create mock RSS content
+        episodes_data: List[Dict[str, Any]] = [
+            {
+                "supercast_episode_id": "123",
+                "title": "Test Episode",
+                "audio_link": "http://test.com/test.mp3",
+                "size": 1000,
+            }
+        ]
+        mock_rss_content = self.create_mock_rss_content(
+            episodes_data, "Test Podcast"
+        )
+        mock_download_rss.return_value = mock_rss_content
+
+        # Create mock podcast
         mock_episode = create_test_episode(
             id="123",
             title="Test Episode",
@@ -32,7 +49,7 @@ class TestPodcastManagerRSS(PodcastTestBase):
             safe_title="Test_Podcast",
             episodes=[mock_episode],
         )
-        mock_parser_from_rss_url.return_value = mock_podcast
+        mock_parse_content.return_value = mock_podcast
 
         manager = PodcastManager.from_rss_url("http://test.com/rss")
 
@@ -50,27 +67,35 @@ class TestPodcastManagerRSS(PodcastTestBase):
             )
             self.assertTrue(os.path.exists(podcast_dir))
 
-    @patch("easy_podcast.parser.PodcastParser.from_rss_url")
+    @patch("easy_podcast.downloader.download_rss_from_url")
     def test_ingest_rss_data_failure(
-        self, mock_parser_from_rss_url: Mock
+        self, mock_download_rss: Mock
     ) -> None:
         """Test RSS ingestion failure using static method."""
-        mock_parser_from_rss_url.return_value = None
+        mock_download_rss.return_value = None
 
         manager = PodcastManager.from_rss_url("http://test.com/rss")
 
         self.assertIsNone(manager)
 
-    @patch("easy_podcast.parser.PodcastParser.from_rss_url")
-    def test_empty_rss_feed(self, mock_parser_from_rss_url: Mock) -> None:
+    @patch("easy_podcast.parser.PodcastParser.from_content")
+    @patch("easy_podcast.downloader.download_rss_from_url")
+    def test_empty_rss_feed(
+        self, mock_download_rss: Mock, mock_parse_content: Mock
+    ) -> None:
         """Test handling of empty RSS feed using static method."""
+        # Create mock RSS content for empty feed
+        mock_rss_content = self.create_mock_rss_content([], "Empty Podcast")
+        mock_download_rss.return_value = mock_rss_content
+
+        # Create mock podcast with no episodes
         mock_podcast = Podcast(
             title="Empty Podcast",
             rss_url="http://test.com/rss",
             safe_title="Empty_Podcast",
             episodes=[],
         )
-        mock_parser_from_rss_url.return_value = mock_podcast
+        mock_parse_content.return_value = mock_podcast
 
         manager = PodcastManager.from_rss_url("http://test.com/rss")
 
@@ -80,11 +105,16 @@ class TestPodcastManagerRSS(PodcastTestBase):
             self.assertEqual(len(podcast.episodes), 0)
             self.assertEqual(len(manager.get_new_episodes()), 0)
 
-    @patch("easy_podcast.parser.PodcastParser.from_rss_url")
+    @patch("easy_podcast.parser.PodcastParser.from_content")
+    @patch("easy_podcast.downloader.download_rss_from_url")
     def test_rss_feed_missing_title(
-        self, mock_parser_from_rss_url: Mock
+        self, mock_download_rss: Mock, mock_parse_content: Mock
     ) -> None:
         """Test handling of RSS feed without title using static method."""
+        # Create mock RSS content
+        mock_rss_content = self.create_mock_rss_content([], "Unknown Podcast")
+        mock_download_rss.return_value = mock_rss_content
+
         # Create a podcast with default title
         mock_podcast = Podcast(
             title="Unknown Podcast",
@@ -92,7 +122,7 @@ class TestPodcastManagerRSS(PodcastTestBase):
             safe_title="Unknown_Podcast",
             episodes=[],
         )
-        mock_parser_from_rss_url.return_value = mock_podcast
+        mock_parse_content.return_value = mock_podcast
 
         manager = PodcastManager.from_rss_url("http://test.com/rss")
 
@@ -101,13 +131,20 @@ class TestPodcastManagerRSS(PodcastTestBase):
             podcast = manager.get_podcast()
             self.assertEqual(podcast.title, "Unknown Podcast")
 
-        mock_parser_from_rss_url.assert_called_once_with("http://test.com/rss")
+        mock_download_rss.assert_called_once_with("http://test.com/rss")
 
-    @patch("easy_podcast.parser.PodcastParser.from_rss_url")
+    @patch("easy_podcast.parser.PodcastParser.from_content")
+    @patch("easy_podcast.downloader.download_rss_from_url")
     def test_sanitized_podcast_title(
-        self, mock_parser_from_rss_url: Mock
+        self, mock_download_rss: Mock, mock_parse_content: Mock
     ) -> None:
         """Test that podcast titles with special characters are sanitized."""
+        # Create mock RSS content
+        mock_rss_content = self.create_mock_rss_content(
+            [], "Test/Podcast\\With:Special*Chars"
+        )
+        mock_download_rss.return_value = mock_rss_content
+
         # Create a podcast with the special characters title
         mock_podcast = Podcast(
             title="Test/Podcast\\With:Special*Chars",
@@ -115,7 +152,7 @@ class TestPodcastManagerRSS(PodcastTestBase):
             safe_title="Test_Podcast_With_Special_Chars",
             episodes=[],
         )
-        mock_parser_from_rss_url.return_value = mock_podcast
+        mock_parse_content.return_value = mock_podcast
 
         manager = PodcastManager.from_rss_url("http://test.com/rss")
 
@@ -129,11 +166,27 @@ class TestPodcastManagerRSS(PodcastTestBase):
             )
             self.assertTrue(os.path.exists(podcast_dir))
 
-    @patch("easy_podcast.parser.PodcastParser.from_rss_url")
+    @patch("easy_podcast.parser.PodcastParser.from_content")
+    @patch("easy_podcast.downloader.download_rss_from_url")
     def test_rss_content_saved_to_file(
-        self, mock_parser_from_rss_url: Mock
+        self, mock_download_rss: Mock, mock_parse_content: Mock
     ) -> None:
         """Test that manager is created correctly from RSS URL."""
+        # Create mock RSS content
+        episodes_data: List[Dict[str, Any]] = [
+            {
+                "supercast_episode_id": "123",
+                "title": "Test Episode",
+                "audio_link": "http://test.com/test.mp3",
+                "size": 1000,
+            }
+        ]
+        mock_rss_content = self.create_mock_rss_content(
+            episodes_data, "Test Podcast"
+        )
+        mock_download_rss.return_value = mock_rss_content
+
+        # Create mock podcast
         mock_episode = create_test_episode(
             id="123",
             published="2023-01-01",
@@ -149,7 +202,7 @@ class TestPodcastManagerRSS(PodcastTestBase):
             safe_title="Test_Podcast",
             episodes=[mock_episode],
         )
-        mock_parser_from_rss_url.return_value = mock_podcast
+        mock_parse_content.return_value = mock_podcast
 
         manager = PodcastManager.from_rss_url("http://test.com/rss")
 

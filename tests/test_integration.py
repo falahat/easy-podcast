@@ -9,7 +9,7 @@ import unittest
 from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
-from easy_podcast.config import set_base_data_dir
+from easy_podcast.path_manager import set_base_data_dir
 from easy_podcast.manager import PodcastManager
 from easy_podcast.models import Episode, Podcast
 from easy_podcast.utils import format_bytes

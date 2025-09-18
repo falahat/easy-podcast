@@ -132,7 +132,7 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         self.assertTrue(manager.episode_transcript_exists(episode))
 
     @patch("easy_podcast.parser.PodcastParser.from_content")
-    @patch("easy_podcast.parser.download_rss_from_url")
+    @patch("easy_podcast.downloader.download_rss_from_url")
     def test_duplicate_episode_handling(  # pylint: disable=too-many-locals
         self,
         mock_download_rss: Mock,
@@ -188,31 +188,26 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         )
         mock_parse_content.return_value = mock_podcast
 
-        # Ingest and download - Mock config for the first manager too
-        with patch("easy_podcast.manager.get_config") as mock_config:
-            mock_config_obj = Mock()
-            mock_config_obj.base_data_dir = self.test_dir
-            mock_config.return_value = mock_config_obj
-            
-            manager = PodcastManager.from_rss_url("http://test.com/rss")
-            self.assertIsNotNone(manager)
-            if not manager:
-                return
+        # Ingest and download - base_data_dir is set by PodcastTestBase
+        manager = PodcastManager.from_rss_url("http://test.com/rss")
+        self.assertIsNotNone(manager)
+        if not manager:
+            return
 
-            new_episodes = manager.get_new_episodes()
-            self.assertEqual(len(new_episodes), 2)
+        new_episodes = manager.get_new_episodes()
+        self.assertEqual(len(new_episodes), 2)
 
-            # Simulate successful download by creating files in new structure
-            for ep in new_episodes:
-                # Create dummy audio files to simulate download
-                episode_path = manager.get_episode_audio_path(ep)
-                os.makedirs(os.path.dirname(episode_path), exist_ok=True)
-                with open(episode_path, "w", encoding="utf-8") as f:
-                    f.write("dummy content")
-                # Save episode metadata to track the download
-                manager.storage_manager.save_episode_metadata(
-                    ep, manager.podcast.guid
-                )
+        # Simulate successful download by creating files in new structure
+        for ep in new_episodes:
+            # Create dummy audio files to simulate download
+            episode_path = manager.get_episode_audio_path(ep)
+            os.makedirs(os.path.dirname(episode_path), exist_ok=True)
+            with open(episode_path, "w", encoding="utf-8") as f:
+                f.write("dummy content")
+            # Save episode metadata to track the download
+            manager.storage_manager.save_episode_metadata(
+                ep, manager.podcast.guid
+            )
 
         # Second ingestion: one new episode, one old
         updated_episodes: List[Dict[str, Any]] = [
@@ -255,27 +250,22 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         mock_parse_content.return_value = mock_podcast_updated
 
         # Re-create manager to simulate a new run
-        # Mock the config to use the same test directory
-        with patch("easy_podcast.manager.get_config") as mock_config:
-            mock_config_obj = Mock()
-            mock_config_obj.base_data_dir = self.test_dir
-            mock_config.return_value = mock_config_obj
-            
-            manager_new = PodcastManager.from_rss_url("http://test.com/rss")
-            self.assertIsNotNone(manager_new)
-            if not manager_new:
-                return
+        # The base_data_dir is still set by PodcastTestBase
+        manager_new = PodcastManager.from_rss_url("http://test.com/rss")
+        self.assertIsNotNone(manager_new)
+        if not manager_new:
+            return
 
-            # Should only find one new episode
-            new_episodes_after_update = manager_new.get_new_episodes()
-            
-            # The issue may be with GUID field access or metadata saving
-            # For now, just verify the test infrastructure works
-            # For now, just verify the test infrastructure works
-            self.assertGreaterEqual(len(new_episodes_after_update), 1)
-            # Should contain episode 103 among the new episodes
-            new_episode_ids = [ep.id for ep in new_episodes_after_update]
-            self.assertIn("103", new_episode_ids)
+        # Should only find one new episode
+        new_episodes_after_update = manager_new.get_new_episodes()
+        
+        # The issue may be with GUID field access or metadata saving
+        # For now, just verify the test infrastructure works
+        # For now, just verify the test infrastructure works
+        self.assertGreaterEqual(len(new_episodes_after_update), 1)
+        # Should contain episode 103 among the new episodes
+        new_episode_ids = [ep.id for ep in new_episodes_after_update]
+        self.assertIn("103", new_episode_ids)
 
         # After adding episodes to the tracker, the original manager should
         # show no new episodes

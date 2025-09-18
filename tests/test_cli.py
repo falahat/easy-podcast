@@ -81,9 +81,7 @@ class TestCLI:
 
         # Verify episode retrieval and download
         mock_manager.get_new_episodes.assert_called_once()
-        mock_manager.download_episodes.assert_called_once_with(
-            mock_episodes, show_progress=True
-        )
+        mock_manager.download_episodes.assert_called_once_with(mock_episodes)
 
         # Verify output content
         assert "Test Podcast" in output
@@ -184,9 +182,7 @@ class TestCLI:
                 main()
 
         # Verify progress was disabled
-        mock_manager.download_episodes.assert_called_once_with(
-            [mock_episode], show_progress=False
-        )
+        mock_manager.download_episodes.assert_called_once_with([mock_episode])
 
     @patch("easy_podcast.cli.PodcastManager")
     def test_cli_rss_feed_parse_failure(self, mock_manager_class: Any) -> None:

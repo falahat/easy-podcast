@@ -105,14 +105,25 @@ class StorageManager:
             return None
             
         try:
-            from .models import Podcast  # Import here to avoid circular
+            # Import here to avoid circular
+            from .models import Podcast, Episode
             
             with open(metadata_path, "r", encoding="utf-8") as f:
                 podcast_data = json.load(f)
+                
+                # Load episodes if present in metadata
+                episodes = []
+                if "episodes" in podcast_data:
+                    episodes = [
+                        Episode.from_dict(ep_data)
+                        for ep_data in podcast_data["episodes"]
+                    ]
+                
                 return Podcast(
                     title=podcast_data["title"],
                     rss_url=podcast_data["rss_url"],
                     safe_title=podcast_data["safe_title"],
+                    episodes=episodes,
                 )
         except (json.JSONDecodeError, FileNotFoundError, KeyError):
             return None
@@ -166,3 +177,30 @@ class StorageManager:
                 return data if isinstance(data, dict) else {}
         except (json.JSONDecodeError, FileNotFoundError):
             return {}
+
+    def save_rss_cache(self, podcast_guid: str, rss_content: bytes) -> None:
+        """Save RSS content to cache file."""
+        cache_path = self.path_manager.get_podcast_rss_cache_path(
+            podcast_guid
+        )
+        
+        # Ensure the podcast directory exists
+        self.path_manager.ensure_podcast_dir_exists(podcast_guid)
+        
+        with open(cache_path, "wb") as f:
+            f.write(rss_content)
+
+    def load_rss_cache(self, podcast_guid: str) -> Optional[bytes]:
+        """Load RSS content from cache file."""
+        cache_path = self.path_manager.get_podcast_rss_cache_path(
+            podcast_guid
+        )
+        
+        if not os.path.exists(cache_path):
+            return None
+            
+        try:
+            with open(cache_path, "rb") as f:
+                return f.read()
+        except (IOError, FileNotFoundError):
+            return None
