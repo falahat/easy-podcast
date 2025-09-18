@@ -6,8 +6,12 @@ import os
 from typing import Any, Dict, List
 from unittest.mock import Mock, patch
 
-from easy_podcast.manager import PodcastManager
+from easy_podcast.factory import create_manager_from_rss, create_manager_from_storage
 from easy_podcast.models import Podcast
+from easy_podcast.manager import PodcastManager
+from easy_podcast.repository import PodcastRepository
+from easy_podcast.storage import Storage
+from easy_podcast.episode_downloader import EpisodeDownloader
 
 from tests.base import PodcastTestBase
 
@@ -16,7 +20,7 @@ class TestPodcastManagerInitialization(PodcastTestBase):
     """Test suite for PodcastManager initialization and factory methods."""
 
     def test_manager_initialization(self) -> None:
-        """Test PodcastManager initialization."""
+        """Test PodcastManager initialization with dependency injection."""
         # Create a simple podcast object for testing
         test_podcast = Podcast(
             title="Test Podcast",
@@ -25,16 +29,18 @@ class TestPodcastManagerInitialization(PodcastTestBase):
             episodes=[],
         )
 
-        # Create a temporary directory for testing
-        test_podcast_dir = os.path.join(self.test_dir, "Test_Podcast")
-        os.makedirs(test_podcast_dir, exist_ok=True)
+        # Create dependencies
+        storage = Storage(self.test_dir)
+        repository = PodcastRepository(storage)
+        downloader = EpisodeDownloader(storage)
 
-        manager = PodcastManager(test_podcast, test_podcast_dir)
+        # Create manager with dependency injection
+        manager = PodcastManager(test_podcast, repository, downloader)
 
-        # Manager should have the correct data directory
-        self.assertEqual(manager.data_dir, test_podcast_dir)
+        # Verify manager properties
         self.assertIsNotNone(manager.podcast)
-        self.assertIsNotNone(manager.file_manager)
+        self.assertIsNotNone(manager.repository)
+        self.assertIsNotNone(manager.downloader)
         self.assertEqual(manager.podcast.title, "Test Podcast")
 
     def test_from_existing_storage_success(self) -> None:
@@ -61,7 +67,7 @@ class TestPodcastManagerInitialization(PodcastTestBase):
             mock_get.return_value = mock_response
 
             # Create the initial manager to set up storage
-            initial_manager = PodcastManager.from_rss_url(
+            initial_manager = create_manager_from_rss(
                 "http://test.com/rss", self.test_dir
             )
             self.assertIsNotNone(initial_manager)
@@ -69,9 +75,7 @@ class TestPodcastManagerInitialization(PodcastTestBase):
             podcast_title = initial_manager.podcast.title
 
         # Now test loading from existing storage
-        manager = PodcastManager.from_podcast_folder(
-            podcast_title, self.test_dir
-        )
+        manager = create_manager_from_storage(podcast_title, self.test_dir)
 
         # Verify the manager was created successfully
         self.assertIsNotNone(manager, "Manager should be created successfully")
@@ -95,7 +99,7 @@ class TestPodcastManagerInitialization(PodcastTestBase):
                 "Episode title should match",
             )
             # Verify podcast directory structure exists
-            podcast_dir = manager.file_manager.get_podcast_dir(
+            podcast_dir = manager.repository.get_podcast_dir(
                 manager.podcast.title
             )
             self.assertTrue(

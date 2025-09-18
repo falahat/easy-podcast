@@ -6,7 +6,7 @@ import argparse
 import os
 import sys
 
-from .manager import PodcastManager
+from .factory import create_manager_from_rss
 from .utils import format_bytes
 
 
@@ -45,7 +45,7 @@ def main() -> None:
         print(f"Using data directory: {data_dir}")
 
         # Initialize manager from RSS URL
-        manager = PodcastManager.from_rss_url(args.rss_url)
+        manager = create_manager_from_rss(args.rss_url, data_dir)
 
         if not manager:
             print(
@@ -82,14 +82,13 @@ def main() -> None:
         # Download episodes
         print("\nDownloading episodes...")
         result = manager.download_episodes(new_episodes)
-        successful_count, skipped_count, failed_count = result
 
         print("\nDownload complete:")
-        print(f"  Successfully downloaded: {successful_count}")
-        print(f"  Already existed (skipped): {skipped_count}")
-        print(f"  Failed downloads: {failed_count}")
+        print(f"  Successfully downloaded: {result.successful}")
+        print(f"  Already existed (skipped): {result.skipped}")
+        print(f"  Failed downloads: {result.failed}")
 
-        if failed_count > 0:
+        if result.failed > 0:
             sys.exit(1)
 
     except KeyboardInterrupt:

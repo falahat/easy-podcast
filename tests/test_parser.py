@@ -172,7 +172,8 @@ class TestPodcastParserFunctions(PodcastTestBase):
         if episode:
             self.assertEqual(episode.id, "ep123")
             self.assertEqual(episode.title, "The Best Episode")
-            self.assertEqual(episode.audio_filename, "ep123.mp3")
+            # audio_filename is no longer a computed property
+            self.assertEqual(episode.audio_link, "http://example.com/ep123.mp3?key=val")
             self.assertEqual(episode.size, 12345)
             # Verify duration was correctly parsed: 1h 23m 45s = 5025 seconds
             self.assertEqual(episode.duration_seconds, 5025)
@@ -240,8 +241,12 @@ class TestPodcastParserFunctions(PodcastTestBase):
             result = self.parser._parse_entry_to_episode(entry)
             self.assertIsNotNone(result)
             if result:
-                # Audio file is always {id}.mp3 regardless of original format
-                self.assertEqual(result.audio_filename, "123.mp3")
+                # Audio filename logic moved to repository layer
+                # Just verify the episode ID and audio link are correct
+                self.assertEqual(result.id, "123")
+                self.assertEqual(
+                    result.audio_link, f"http://test.com/audio{original_ext}"
+                )
 
     def test_parse_entry_url_with_query_params(self) -> None:
         """Test parsing audio URL with query parameters."""
@@ -259,9 +264,9 @@ class TestPodcastParserFunctions(PodcastTestBase):
         result = self.parser._parse_entry_to_episode(entry)
         self.assertIsNotNone(result)
         if result:
-            self.assertEqual(
-                result.audio_filename, "123.mp3"
-            )  # Should strip query params for filename
+            # Verify episode ID is correct - filename logic is in repository
+            self.assertEqual(result.id, "123")
+            self.assertTrue(result.audio_link.startswith("http://test.com/audio"))
 
     def test_parse_entry_with_empty_fields(self) -> None:
         """Test parsing entry with missing optional fields."""

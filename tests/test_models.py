@@ -30,12 +30,6 @@ class TestEpisode(unittest.TestCase):
         self.assertEqual(episode.title, "Test Episode")
         self.assertEqual(episode.size, 1000)
         self.assertEqual(episode.duration_seconds, 1800)
-        self.assertEqual(
-            episode.audio_filename, "123.mp3"
-        )  # Test the computed property
-        self.assertEqual(
-            episode.transcript_filename, "123_transcript.json"
-        )  # Test the computed property
 
     def test_episode_to_json_serialization(self) -> None:
         """Test that Episode objects serialize correctly to JSON."""
