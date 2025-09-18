@@ -18,7 +18,7 @@ class Episode:  # pylint: disable=too-many-instance-attributes
     Note: audio_file and transcript_file are now computed properties based on
     the episode ID. When accessing the actual file, combine these with the
     podcast's download directory.
-    
+
     The 'id' field contains the current supercast_episode_id for backward
     compatibility. The 'guid' field will contain the RSS standard GUID.
     During transition, 'guid' may be None for existing episodes.
@@ -68,7 +68,7 @@ class Episode:  # pylint: disable=too-many-instance-attributes
 @dataclass
 class Podcast:
     """Represents a podcast, containing its metadata and episodes.
-    
+
     The 'guid' field contains the RSS standard GUID for the podcast.
     During transition, this may be derived from the RSS URL or feed data.
     """
@@ -84,11 +84,11 @@ class Podcast:
         """Create Podcast from dictionary."""
         # Make a copy to avoid modifying the original
         data = data.copy()
-        
+
         # Handle episodes list if present
         episodes_data = data.pop("episodes", [])
         episodes = [Episode.from_dict(ep_data) for ep_data in episodes_data]
-        
+
         return cls(episodes=episodes, **data)
 
     def to_json(self) -> str:

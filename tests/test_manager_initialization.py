@@ -198,6 +198,7 @@ class TestPodcastManagerInitialization(PodcastTestBase):
     def test_from_rss_url_download_failure(self, mock_get: Mock) -> None:
         """Test from_rss_url when RSS download fails."""
         import requests
+
         mock_get.side_effect = requests.exceptions.ConnectionError(
             "Network error"
         )

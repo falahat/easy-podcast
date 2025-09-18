@@ -126,11 +126,11 @@ class PodcastParser:
         # and the RSS standard GUID
         episode_id = entry.get("supercast_episode_id")
         episode_guid = entry.get("guid", "")
-        
+
         # If we don't have a supercast ID, try to use the GUID as ID
         if not episode_id:
             episode_id = episode_guid
-            
+
         if not episode_id:
             self.logger.debug(
                 "Skipping entry without episode ID or GUID: %s",

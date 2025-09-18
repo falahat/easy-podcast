@@ -21,7 +21,7 @@ class TestPodcastManagerDownloads(PodcastTestBase):
             size=1000,
             audio_link="http://test.com/123.mp3",
         )
-        
+
         test_podcast = self.create_test_podcast(episodes=[episode])
 
         test_podcast_dir = self.test_dir  # Use base test dir, not subdirectory
@@ -34,13 +34,13 @@ class TestPodcastManagerDownloads(PodcastTestBase):
         ) as mock_download:
             expected_path = manager.get_episode_audio_path(episode)
             mock_download.return_value = (expected_path, True)
-            
+
             download_path, was_downloaded = manager.download_episode(episode)
             # Episode should download successfully with mock
             self.assertIsNotNone(download_path)
             self.assertEqual(download_path, expected_path)
             self.assertTrue(was_downloaded)
-            
+
             # Verify the download function was called with correct arguments
             mock_download.assert_called_once_with(
                 "http://test.com/123.mp3", expected_path
@@ -100,7 +100,7 @@ class TestPodcastManagerDownloads(PodcastTestBase):
                 else:
                     # Failed download
                     return (None, False)
-            
+
             mock_download.side_effect = mock_download_side_effect
 
             successful, skipped, failed = manager.download_episodes(
@@ -134,9 +134,7 @@ class TestPodcastManagerDownloads(PodcastTestBase):
             expected_path = manager.get_episode_audio_path(episode)
             mock_download.return_value = (expected_path, True)
 
-            download_path, was_downloaded = manager.download_episode(
-                episode
-            )
+            download_path, was_downloaded = manager.download_episode(episode)
 
             # Verify the download result
             self.assertEqual(download_path, expected_path)

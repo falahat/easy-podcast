@@ -30,7 +30,8 @@ class TestCLI:
         """Clean up test environment."""
         self.env_patcher.stop()
         import shutil
-        if hasattr(self, 'test_dir') and os.path.exists(self.test_dir):
+
+        if hasattr(self, "test_dir") and os.path.exists(self.test_dir):
             shutil.rmtree(self.test_dir)
 
     def test_cli_help_message(self) -> None:
@@ -121,7 +122,9 @@ class TestCLI:
                 "http://example.com/feed.xml",
             ],
         ):
-            with patch.dict(os.environ, {"PODCAST_DATA_DIRECTORY": "/custom/path"}):
+            with patch.dict(
+                os.environ, {"PODCAST_DATA_DIRECTORY": "/custom/path"}
+            ):
                 with patch("sys.stderr", StringIO()):
                     with pytest.raises(SystemExit) as excinfo:
                         main()

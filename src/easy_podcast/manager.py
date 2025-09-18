@@ -36,9 +36,7 @@ class PodcastManager:
 
         # Log some statistics about audio files
         episodes_with_audio = [
-            ep
-            for ep in self.podcast.episodes
-            if self.episode_audio_exists(ep)
+            ep for ep in self.podcast.episodes if self.episode_audio_exists(ep)
         ]
         self.logger.info(
             "Found %d episodes with existing audio files",
@@ -73,12 +71,12 @@ class PodcastManager:
         """Get set of episode IDs that have been downloaded."""
         episodes = self.file_manager.load_episodes(self.podcast.title)
         downloaded_ids = set()
-        
+
         for episode in episodes:
             # Check if the audio file actually exists
             if self.episode_audio_exists(episode):
                 downloaded_ids.add(episode.id)
-        
+
         return downloaded_ids
 
     def get_podcast(self) -> Podcast:
@@ -157,12 +155,12 @@ class PodcastManager:
         # Create PodcastManager instance
         try:
             manager = PodcastManager(podcast, data_dir)
-            
+
             # Save podcast metadata, episodes, and RSS cache
             manager.file_manager.save_podcast_metadata(podcast)
             manager.file_manager.save_episodes(podcast.title, podcast.episodes)
             manager.file_manager.save_rss_cache(podcast.title, rss_content)
-            
+
             logger.info(
                 "Successfully created PodcastManager for '%s' from RSS URL",
                 podcast.title,
@@ -177,16 +175,15 @@ class PodcastManager:
         """Get episodes that haven't been downloaded yet."""
         existing_ids = self.get_existing_episode_ids()
         new_episodes = [
-            ep for ep in self.podcast.episodes
-            if ep.id not in existing_ids
+            ep for ep in self.podcast.episodes if ep.id not in existing_ids
         ]
-        
+
         self.logger.info(
             "Found %d new episodes out of %d total episodes",
             len(new_episodes),
             len(self.podcast.episodes),
         )
-        
+
         return new_episodes
 
     # Download Management
@@ -201,7 +198,7 @@ class PodcastManager:
         successful_count = 0
         skipped_count = 0
         failed_count = 0
-        
+
         for episode in episodes:
             try:
                 download_path, was_downloaded = self.download_episode(episode)
@@ -217,12 +214,14 @@ class PodcastManager:
                     "Failed to download episode %s: %s", episode.id, e
                 )
                 failed_count += 1
-        
+
         self.logger.info(
             "Download results: %d successful, %d skipped, %d failed",
-            successful_count, skipped_count, failed_count
+            successful_count,
+            skipped_count,
+            failed_count,
         )
-        
+
         return successful_count, skipped_count, failed_count
 
     def download_episode(self, episode: Episode) -> Tuple[Optional[str], bool]:
@@ -231,20 +230,21 @@ class PodcastManager:
         download_path = self.file_manager.get_episode_audio_path(
             self.podcast.title, episode
         )
-        
+
         # Check if file already exists
         if os.path.exists(download_path):
             self.logger.info(
                 "Audio file already exists for episode %s: %s",
-                episode.id, download_path
+                episode.id,
+                download_path,
             )
             return download_path, False
-        
+
         # Download the episode
         try:
             # Import here to avoid circular dependency
             from .downloader import download_file_to_path
-            
+
             _, success = download_file_to_path(
                 episode.audio_link, download_path
             )
@@ -255,7 +255,7 @@ class PodcastManager:
                 episodes = [ep for ep in episodes if ep.id != episode.id]
                 episodes.append(episode)
                 self.file_manager.save_episodes(self.podcast.title, episodes)
-                
+
                 self.logger.debug("Saved metadata for episode %s", episode.id)
                 return download_path, True
             else:

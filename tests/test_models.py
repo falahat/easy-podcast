@@ -148,7 +148,7 @@ class TestPodcast(unittest.TestCase):
         # Test from_dict
         podcast_dict = json.loads(json_str)
         restored_podcast = Podcast.from_dict(podcast_dict)
-        
+
         self.assertEqual(restored_podcast.title, "Test Podcast")
         self.assertEqual(restored_podcast.rss_url, "http://test.com/rss")
         self.assertEqual(restored_podcast.safe_title, "Test_Podcast")
@@ -162,7 +162,7 @@ class TestPodcast(unittest.TestCase):
             size=1000,
             audio_link="http://test.com/123.mp3",
         )
-        
+
         podcast = Podcast(
             title="Test Podcast",
             rss_url="http://test.com/rss",
@@ -174,7 +174,7 @@ class TestPodcast(unittest.TestCase):
         # Test serialization round-trip
         podcast_dict = json.loads(podcast.to_json())
         restored_podcast = Podcast.from_dict(podcast_dict)
-        
+
         self.assertEqual(len(restored_podcast.episodes), 1)
         self.assertEqual(restored_podcast.episodes[0].id, "123")
         self.assertEqual(restored_podcast.episodes[0].size, 1000)

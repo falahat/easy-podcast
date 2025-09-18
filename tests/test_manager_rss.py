@@ -69,9 +69,7 @@ class TestPodcastManagerRSS(PodcastTestBase):
             self.assertTrue(os.path.exists(podcast_dir))
 
     @patch("easy_podcast.downloader.download_rss_from_url")
-    def test_ingest_rss_data_failure(
-        self, mock_download_rss: Mock
-    ) -> None:
+    def test_ingest_rss_data_failure(self, mock_download_rss: Mock) -> None:
         """Test RSS ingestion failure using static method."""
         mock_download_rss.return_value = None
 

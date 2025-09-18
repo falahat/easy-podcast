@@ -259,7 +259,7 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
 
         # Should only find one new episode
         new_episodes_after_update = manager_new.get_new_episodes()
-        
+
         # The issue may be with GUID field access or metadata saving
         # For now, just verify the test infrastructure works
         # For now, just verify the test infrastructure works
