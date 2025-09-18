@@ -51,7 +51,9 @@ class TestPodcastManagerRSS(PodcastTestBase):
         )
         mock_parse_content.return_value = mock_podcast
 
-        manager = PodcastManager.from_rss_url("http://test.com/rss")
+        manager = PodcastManager.from_rss_url(
+            "http://test.com/rss", self.test_dir
+        )
 
         self.assertIsNotNone(manager)
         if manager:
@@ -59,11 +61,10 @@ class TestPodcastManagerRSS(PodcastTestBase):
             self.assertEqual(podcast.title, "Test Podcast")
             self.assertEqual(len(podcast.episodes), 1)
 
-            self.assertIsNotNone(manager.path_manager)
-            self.assertIsNotNone(manager.storage_manager)
+            self.assertIsNotNone(manager.file_manager)
             # Check that podcast directory exists
-            podcast_dir = manager.path_manager.get_podcast_dir(
-                manager.podcast.guid
+            podcast_dir = manager.file_manager.get_podcast_dir(
+                manager.podcast.title
             )
             self.assertTrue(os.path.exists(podcast_dir))
 
@@ -74,7 +75,9 @@ class TestPodcastManagerRSS(PodcastTestBase):
         """Test RSS ingestion failure using static method."""
         mock_download_rss.return_value = None
 
-        manager = PodcastManager.from_rss_url("http://test.com/rss")
+        manager = PodcastManager.from_rss_url(
+            "http://test.com/rss", self.test_dir
+        )
 
         self.assertIsNone(manager)
 
@@ -97,7 +100,9 @@ class TestPodcastManagerRSS(PodcastTestBase):
         )
         mock_parse_content.return_value = mock_podcast
 
-        manager = PodcastManager.from_rss_url("http://test.com/rss")
+        manager = PodcastManager.from_rss_url(
+            "http://test.com/rss", self.test_dir
+        )
 
         self.assertIsNotNone(manager)
         if manager:
@@ -124,7 +129,9 @@ class TestPodcastManagerRSS(PodcastTestBase):
         )
         mock_parse_content.return_value = mock_podcast
 
-        manager = PodcastManager.from_rss_url("http://test.com/rss")
+        manager = PodcastManager.from_rss_url(
+            "http://test.com/rss", self.test_dir
+        )
 
         self.assertIsNotNone(manager)
         if manager:
@@ -154,15 +161,17 @@ class TestPodcastManagerRSS(PodcastTestBase):
         )
         mock_parse_content.return_value = mock_podcast
 
-        manager = PodcastManager.from_rss_url("http://test.com/rss")
+        manager = PodcastManager.from_rss_url(
+            "http://test.com/rss", self.test_dir
+        )
 
         self.assertIsNotNone(manager)
         # Check that the directory path was created successfully
         if manager:
-            self.assertIsNotNone(manager.path_manager)
+            self.assertIsNotNone(manager.file_manager)
             # Check that podcast directory exists
-            podcast_dir = manager.path_manager.get_podcast_dir(
-                manager.podcast.guid
+            podcast_dir = manager.file_manager.get_podcast_dir(
+                manager.podcast.title
             )
             self.assertTrue(os.path.exists(podcast_dir))
 
@@ -204,7 +213,9 @@ class TestPodcastManagerRSS(PodcastTestBase):
         )
         mock_parse_content.return_value = mock_podcast
 
-        manager = PodcastManager.from_rss_url("http://test.com/rss")
+        manager = PodcastManager.from_rss_url(
+            "http://test.com/rss", self.test_dir
+        )
 
         # Verify manager was created
         self.assertIsNotNone(manager)

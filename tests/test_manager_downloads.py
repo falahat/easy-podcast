@@ -26,12 +26,11 @@ class TestPodcastManagerDownloads(PodcastTestBase):
 
         test_podcast_dir = self.test_dir  # Use base test dir, not subdirectory
 
-        manager = PodcastManager(test_podcast_dir, test_podcast)
+        manager = PodcastManager(test_podcast, test_podcast_dir)
 
-        # This should work now since episode is part of podcast episodes
-        # Mock the download to simulate success
+        # Mock the download function to simulate success
         with patch(
-            "easy_podcast.manager.download_episode_file"
+            "easy_podcast.downloader.download_file_to_path"
         ) as mock_download:
             expected_path = manager.get_episode_audio_path(episode)
             mock_download.return_value = (expected_path, True)
@@ -41,6 +40,11 @@ class TestPodcastManagerDownloads(PodcastTestBase):
             self.assertIsNotNone(download_path)
             self.assertEqual(download_path, expected_path)
             self.assertTrue(was_downloaded)
+            
+            # Verify the download function was called with correct arguments
+            mock_download.assert_called_once_with(
+                "http://test.com/123.mp3", expected_path
+            )
 
     def test_download_episodes_without_ingest(self) -> None:
         """Test batch downloading with properly initialized manager."""
@@ -49,7 +53,7 @@ class TestPodcastManagerDownloads(PodcastTestBase):
         test_podcast_dir = os.path.join(self.test_dir, "Test_Podcast")
         os.makedirs(test_podcast_dir, exist_ok=True)
 
-        manager = PodcastManager(test_podcast_dir, test_podcast)
+        manager = PodcastManager(test_podcast, test_podcast_dir)
 
         episode = create_test_episode(
             id="123",
@@ -82,43 +86,31 @@ class TestPodcastManagerDownloads(PodcastTestBase):
         test_podcast = self.create_test_podcast(episodes=[episode1, episode2])
         test_podcast_dir = os.path.join(self.test_dir, "Test_Podcast")
         os.makedirs(test_podcast_dir, exist_ok=True)
-        manager = PodcastManager(test_podcast_dir, test_podcast)
+        manager = PodcastManager(test_podcast, test_podcast_dir)
 
-        # Mock the download_episode_file function
+        # Mock the download function to avoid actual downloads
         with patch(
-            "easy_podcast.manager.download_episode_file"
+            "easy_podcast.downloader.download_file_to_path"
         ) as mock_download:
             # Mock to return success for episode1, failure for episode2
-            def mock_download_side_effect(  # type: ignore
-                episode, path_manager, podcast_guid
-            ):
-                if episode.id == "1":
-                    episode_dir = path_manager.get_episode_dir(
-                        episode, podcast_guid
-                    )
-                    return (os.path.join(episode_dir, "1.mp3"), True)
+            def mock_download_side_effect(url, path):  # type: ignore
+                if "ep1.mp3" in url:
+                    # Successful download
+                    return (path, True)
                 else:
+                    # Failed download
                     return (None, False)
             
             mock_download.side_effect = mock_download_side_effect
 
-            # Mock the storage manager save method
-            with patch.object(
-                manager.storage_manager, "save_episode_metadata"
-            ) as mock_save:
-                successful, skipped, failed = manager.download_episodes(
-                    [episode1, episode2]
-                )
+            successful, skipped, failed = manager.download_episodes(
+                [episode1, episode2]
+            )
 
-                # Verify results
-                self.assertEqual(successful, 1)
-                self.assertEqual(skipped, 0)
-                self.assertEqual(failed, 1)
-
-                # Verify that only the successful episode had metadata saved
-                mock_save.assert_called_once_with(
-                    episode1, manager.podcast.guid
-                )
+            # Verify results
+            self.assertEqual(successful, 1)
+            self.assertEqual(skipped, 0)
+            self.assertEqual(failed, 1)
 
     def test_download_episode_success_with_tracking(self) -> None:
         """Test download_episode with successful download and tracking."""
@@ -133,31 +125,22 @@ class TestPodcastManagerDownloads(PodcastTestBase):
 
         test_podcast_dir = os.path.join(self.test_dir, "Test_Podcast")
         os.makedirs(test_podcast_dir, exist_ok=True)
-        manager = PodcastManager(test_podcast_dir, test_podcast)
+        manager = PodcastManager(test_podcast, test_podcast_dir)
 
-        # Mock download_episode_file to return success
+        # Mock the download function to simulate success
         with patch(
-            "easy_podcast.manager.download_episode_file"
+            "easy_podcast.downloader.download_file_to_path"
         ) as mock_download:
             expected_path = manager.get_episode_audio_path(episode)
             mock_download.return_value = (expected_path, True)
 
-            # Mock storage manager save method instead of episode tracker
-            with patch.object(
-                manager.storage_manager, "save_episode_metadata"
-            ) as mock_save:
-                download_path, was_downloaded = manager.download_episode(
-                    episode
-                )
+            download_path, was_downloaded = manager.download_episode(
+                episode
+            )
 
-                # Verify the download result
-                self.assertEqual(download_path, expected_path)
-                self.assertTrue(was_downloaded)
-
-                # Verify episode metadata was saved
-                mock_save.assert_called_once_with(
-                    episode, manager.podcast.guid
-                )
+            # Verify the download result
+            self.assertEqual(download_path, expected_path)
+            self.assertTrue(was_downloaded)
 
     def test_download_episode_already_exists(self) -> None:
         """Test download_episode when episode already exists."""
@@ -172,23 +155,20 @@ class TestPodcastManagerDownloads(PodcastTestBase):
 
         test_podcast_dir = os.path.join(self.test_dir, "Test_Podcast")
         os.makedirs(test_podcast_dir, exist_ok=True)
-        manager = PodcastManager(test_podcast_dir, test_podcast)
+        manager = PodcastManager(test_podcast, test_podcast_dir)
 
         # Mock download_episode_file to return existing file
-        with patch(
-            "easy_podcast.manager.download_episode_file"
-        ) as mock_download:
-            expected_path = manager.get_episode_audio_path(episode)
-            mock_download.return_value = (
-                expected_path,
-                False,
-            )  # File exists, not downloaded
+        # Create the episode file to simulate it already exists
+        episode_path = manager.get_episode_audio_path(episode)
+        os.makedirs(os.path.dirname(episode_path), exist_ok=True)
+        with open(episode_path, "w", encoding="utf-8") as f:
+            f.write("existing content")
 
-            download_path, was_downloaded = manager.download_episode(episode)
+        download_path, was_downloaded = manager.download_episode(episode)
 
-            # Verify the download result
-            self.assertEqual(download_path, expected_path)
-            self.assertFalse(was_downloaded)
+        # Verify the download result
+        self.assertEqual(download_path, episode_path)
+        self.assertFalse(was_downloaded)  # Should not download again
 
     def test_download_episode_failure(self) -> None:
         """Test download_episode when download fails."""
@@ -203,11 +183,11 @@ class TestPodcastManagerDownloads(PodcastTestBase):
 
         test_podcast_dir = os.path.join(self.test_dir, "Test_Podcast")
         os.makedirs(test_podcast_dir, exist_ok=True)
-        manager = PodcastManager(test_podcast_dir, test_podcast)
+        manager = PodcastManager(test_podcast, test_podcast_dir)
 
-        # Mock download_episode_file to return failure
+        # Mock the download function to return failure
         with patch(
-            "easy_podcast.manager.download_episode_file"
+            "easy_podcast.downloader.download_file_to_path"
         ) as mock_download:
             mock_download.return_value = (None, False)  # Download failed
 

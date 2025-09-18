@@ -29,19 +29,18 @@ class TestPodcastManagerInitialization(PodcastTestBase):
         test_podcast_dir = os.path.join(self.test_dir, "Test_Podcast")
         os.makedirs(test_podcast_dir, exist_ok=True)
 
-        manager = PodcastManager(test_podcast_dir, test_podcast)
+        manager = PodcastManager(test_podcast, test_podcast_dir)
 
-        # Manager should have its own path manager with the correct directory
-        self.assertEqual(manager.path_manager.base_data_dir, test_podcast_dir)
+        # Manager should have the correct data directory
+        self.assertEqual(manager.data_dir, test_podcast_dir)
         self.assertIsNotNone(manager.podcast)
-        self.assertIsNotNone(manager.storage_manager)
-        self.assertIsNotNone(manager.path_manager)
+        self.assertIsNotNone(manager.file_manager)
         self.assertEqual(manager.podcast.title, "Test Podcast")
 
     def test_from_existing_storage_success(self) -> None:
-        """Test successful creation from existing new-format storage."""
+        """Test successful creation from existing storage."""
         # First create a manager using from_rss_url,
-        # then load it with from_existing_storage
+        # then load it with from_podcast_folder
         episodes_data: List[Dict[str, Any]] = [
             {
                 "supercast_episode_id": "456",
@@ -63,14 +62,16 @@ class TestPodcastManagerInitialization(PodcastTestBase):
 
             # Create the initial manager to set up storage
             initial_manager = PodcastManager.from_rss_url(
-                "http://test.com/rss"
+                "http://test.com/rss", self.test_dir
             )
             self.assertIsNotNone(initial_manager)
             assert initial_manager is not None  # Type hint for mypy
-            podcast_guid = initial_manager.podcast.guid
+            podcast_title = initial_manager.podcast.title
 
         # Now test loading from existing storage
-        manager = PodcastManager.from_existing_storage(podcast_guid)
+        manager = PodcastManager.from_podcast_folder(
+            podcast_title, self.test_dir
+        )
 
         # Verify the manager was created successfully
         self.assertIsNotNone(manager, "Manager should be created successfully")
@@ -94,38 +95,40 @@ class TestPodcastManagerInitialization(PodcastTestBase):
                 "Episode title should match",
             )
             # Verify podcast directory structure exists
-            podcast_dir = manager.path_manager.get_podcast_dir(
-                manager.podcast.guid
+            podcast_dir = manager.file_manager.get_podcast_dir(
+                manager.podcast.title
             )
             self.assertTrue(
                 os.path.exists(podcast_dir),
                 "Podcast directory should exist",
             )
 
-    def test_from_existing_storage_nonexistent_guid(self) -> None:
-        """Test from_existing_storage with non-existent GUID."""
-        # Test with a GUID that doesn't exist
-        fake_guid = "nonexistent-guid-12345"
-        manager = PodcastManager.from_existing_storage(fake_guid)
+    def test_from_podcast_folder_nonexistent_title(self) -> None:
+        """Test from_podcast_folder with non-existent title."""
+        # Test with a title that doesn't exist
+        fake_title = "Nonexistent Podcast"
+        manager = PodcastManager.from_podcast_folder(fake_title, self.test_dir)
 
         # Verify the manager creation failed
         self.assertIsNone(
-            manager, "Manager should be None for non-existent GUID"
+            manager, "Manager should be None for non-existent title"
         )
 
-    def test_from_existing_storage_invalid_guid_format(self) -> None:
-        """Test from_existing_storage with invalid GUID format."""
-        # Test with an invalid GUID format
-        invalid_guid = "not-a-valid-guid"
-        manager = PodcastManager.from_existing_storage(invalid_guid)
+    def test_from_podcast_folder_invalid_title(self) -> None:
+        """Test from_podcast_folder with invalid title format."""
+        # Test with an invalid title format (empty)
+        invalid_title = ""
+        manager = PodcastManager.from_podcast_folder(
+            invalid_title, self.test_dir
+        )
 
         # Verify the manager creation failed
         self.assertIsNone(
-            manager, "Manager should be None for invalid GUID format"
+            manager, "Manager should be None for invalid title format"
         )
 
-    def test_from_existing_storage_empty_episodes(self) -> None:
-        """Test from_existing_storage with podcast containing no episodes."""
+    def test_from_podcast_folder_empty_episodes(self) -> None:
+        """Test from_podcast_folder with podcast containing no episodes."""
         # Create a manager with no episodes first
         rss_content = self.create_mock_rss_content([], title="Empty Podcast")
 
@@ -136,14 +139,16 @@ class TestPodcastManagerInitialization(PodcastTestBase):
             mock_get.return_value = mock_response
 
             initial_manager = PodcastManager.from_rss_url(
-                "http://test.com/empty_rss"
+                "http://test.com/empty_rss", self.test_dir
             )
             self.assertIsNotNone(initial_manager)
             assert initial_manager is not None
-            podcast_guid = initial_manager.podcast.guid
+            podcast_title = initial_manager.podcast.title
 
         # Now test loading from existing storage
-        manager = PodcastManager.from_existing_storage(podcast_guid)
+        manager = PodcastManager.from_podcast_folder(
+            podcast_title, self.test_dir
+        )
 
         # Verify the manager was created successfully even with no episodes
         self.assertIsNotNone(
@@ -179,7 +184,9 @@ class TestPodcastManagerInitialization(PodcastTestBase):
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
 
-        manager = PodcastManager.from_rss_url("http://test.com/rss")
+        manager = PodcastManager.from_rss_url(
+            "http://test.com/rss", self.test_dir
+        )
 
         self.assertIsNotNone(manager)
         if manager:
@@ -195,6 +202,8 @@ class TestPodcastManagerInitialization(PodcastTestBase):
             "Network error"
         )
 
-        manager = PodcastManager.from_rss_url("http://test.com/rss")
+        manager = PodcastManager.from_rss_url(
+            "http://test.com/rss", self.test_dir
+        )
 
         self.assertIsNone(manager)

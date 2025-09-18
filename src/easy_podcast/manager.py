@@ -6,52 +6,33 @@ import logging
 import os
 from typing import List, Optional, Tuple
 
-from .path_manager import PathManager
-from .downloader import download_episode_file
+from .file_manager import FileManager
 from .models import Episode, Podcast
 from .parser import PodcastParser
-from .storage_manager import StorageManager
 
 
 class PodcastManager:
     """
     Orchestrates podcast data ingestion, metadata management,
-    and episode downloads using the new nested storage system.
+    and episode downloads using simplified file management.
     """
 
-    def __init__(self, base_data_dir: str, podcast: Podcast):
-        """Initialize with base data directory and podcast object."""
+    def __init__(self, podcast: Podcast, data_dir: str = "./data"):
+        """Initialize with podcast and optional data directory."""
         self.logger = logging.getLogger(__name__)
         self.podcast: Podcast = podcast
-        self.base_data_dir = base_data_dir
+        self.data_dir = data_dir
 
-        # Initialize new storage system components
-        self.path_manager = PathManager(base_data_dir)
-        self.storage_manager = StorageManager(self.path_manager)
-
-        # Ensure the podcast has a valid GUID
-        if not getattr(self.podcast, 'guid', None):
-            self.podcast.guid = self.podcast.rss_url
-
-        # Add podcast to path manager mappings
-        self.path_manager.add_podcast(self.podcast.guid, self.podcast.title)
-
-        # Add all episodes to path manager mappings
-        for episode in self.podcast.episodes:
-            if not getattr(episode, 'guid', None):
-                episode.guid = episode.id  # Fallback for compatibility
-            self.path_manager.add_episode(
-                self.podcast.guid, episode.guid, episode.title
-            )
+        # Initialize simplified file manager
+        self.file_manager = FileManager(data_dir)
 
         self.logger.info(
             "Initializing PodcastManager for podcast: '%s'", self.podcast.title
         )
-        self.logger.info("Base data directory: %s", base_data_dir)
+        self.logger.info("Data directory: %s", data_dir)
 
-        # Ensure base directories exist
-        self.path_manager.ensure_base_dirs_exist()
-        self.path_manager.ensure_podcast_dir_exists(self.podcast.guid)
+        # Ensure podcast directory exists
+        self.file_manager.ensure_podcast_dir_exists(self.podcast.title)
 
         # Log some statistics about audio files
         episodes_with_audio = [
@@ -66,21 +47,21 @@ class PodcastManager:
 
     def episode_audio_exists(self, episode: Episode) -> bool:
         """Check if an episode's audio file exists."""
-        audio_path = self.path_manager.get_episode_audio_path(
-            episode, self.podcast.guid
+        audio_path = self.file_manager.get_episode_audio_path(
+            self.podcast.title, episode
         )
         return os.path.exists(audio_path)
 
     def get_episode_audio_path(self, episode: Episode) -> str:
         """Get the full path to an episode's audio file."""
-        return self.path_manager.get_episode_audio_path(
-            episode, self.podcast.guid
+        return self.file_manager.get_episode_audio_path(
+            self.podcast.title, episode
         )
 
     def get_episode_transcript_path(self, episode: Episode) -> str:
         """Get the full path to an episode's transcript file."""
-        return self.path_manager.get_episode_transcript_path(
-            episode, self.podcast.guid
+        return self.file_manager.get_episode_transcript_path(
+            self.podcast.title, episode
         )
 
     def episode_transcript_exists(self, episode: Episode) -> bool:
@@ -89,11 +70,16 @@ class PodcastManager:
         return os.path.exists(transcript_path)
 
     def get_existing_episode_ids(self) -> set[str]:
-        """Get set of existing episode IDs using StorageManager."""
-        episodes = self.storage_manager.list_podcast_episodes(
-            self.podcast.guid
-        )
-        return {episode.id for episode in episodes}
+        """Get set of episode IDs that have been downloaded."""
+        episodes = self.file_manager.load_episodes(self.podcast.title)
+        downloaded_ids = set()
+        
+        for episode in episodes:
+            # Check if the audio file actually exists
+            if self.episode_audio_exists(episode):
+                downloaded_ids.add(episode.id)
+        
+        return downloaded_ids
 
     def get_podcast(self) -> Podcast:
         """Get currently loaded podcast."""
@@ -101,40 +87,28 @@ class PodcastManager:
 
     def get_podcast_data_dir(self) -> str:
         """Get the data directory for this podcast."""
-        return self.path_manager.get_podcast_dir(self.podcast.guid)
+        return self.file_manager.get_podcast_dir(self.podcast.title)
 
     @staticmethod
-    def from_existing_storage(podcast_guid: str) -> Optional["PodcastManager"]:
-        """Load podcast from existing new storage format."""
+    def from_podcast_folder(
+        podcast_title: str, data_dir: str = "./data"
+    ) -> Optional["PodcastManager"]:
+        """Create a manager from an existing podcast folder."""
         logger = logging.getLogger(__name__)
-        logger.info("Loading podcast from storage: %s", podcast_guid)
+        logger.info("Loading podcast from folder: %s", podcast_title)
 
         try:
-            # Get base data directory and set up storage components
-            # Import here to avoid circular dependency
-            from .path_manager import get_base_data_dir
-            
-            base_data_dir = get_base_data_dir()
-            path_manager = PathManager(base_data_dir)
-            storage_manager = StorageManager(path_manager)
+            file_manager = FileManager(data_dir)
 
             # Load podcast metadata
-            podcast = storage_manager.load_podcast_metadata(podcast_guid)
+            podcast = file_manager.load_podcast_metadata(podcast_title)
             if not podcast:
-                logger.error("Podcast not found in storage: %s", podcast_guid)
+                logger.error("Podcast not found: %s", podcast_title)
                 return None
 
-            # Load existing episodes from storage (individual episode files)
-            episodes = storage_manager.list_podcast_episodes(podcast_guid)
-            
-            # If no individual episode files found, use episodes from metadata
-            if episodes:
-                podcast.episodes = episodes
-            else:
-                logger.info(
-                    "No individual episode files found, "
-                    "using episodes from podcast metadata"
-                )
+            # Load existing episodes
+            episodes = file_manager.load_episodes(podcast_title)
+            podcast.episodes = episodes
 
             logger.info(
                 "Loaded podcast '%s' with %d episodes from storage",
@@ -143,17 +117,16 @@ class PodcastManager:
             )
 
             # Create PodcastManager instance
-            manager = PodcastManager(base_data_dir, podcast)
+            manager = PodcastManager(podcast, data_dir)
             return manager
-        except ValueError as e:
-            logger.error("Invalid GUID or missing podcast: %s", e)
-            return None
         except Exception as e:  # pylint: disable=broad-except
             logger.error("Failed to load podcast from storage: %s", e)
             return None
 
     @staticmethod
-    def from_rss_url(rss_url: str) -> Optional["PodcastManager"]:
+    def from_rss_url(
+        rss_url: str, data_dir: str = "./data"
+    ) -> Optional["PodcastManager"]:
         """Create a manager by downloading and parsing an RSS feed."""
         logger = logging.getLogger(__name__)
         logger.info("Creating PodcastManager from RSS URL: %s", rss_url)
@@ -181,20 +154,14 @@ class PodcastManager:
             podcast.safe_title,
         )
 
-        # Set up data directory structure using new storage system
-        # Import here to avoid circular dependency
-        from .path_manager import get_base_data_dir
-        
-        base_data_dir = get_base_data_dir()
-        logger.info("Base data directory: %s", base_data_dir)
-
-        # Create PodcastManager instance with new storage system
+        # Create PodcastManager instance
         try:
-            manager = PodcastManager(base_data_dir, podcast)
+            manager = PodcastManager(podcast, data_dir)
             
-            # Save podcast metadata and RSS cache in new format
-            manager.storage_manager.save_podcast_metadata(podcast)
-            manager.storage_manager.save_rss_cache(podcast.guid, rss_content)
+            # Save podcast metadata, episodes, and RSS cache
+            manager.file_manager.save_podcast_metadata(podcast)
+            manager.file_manager.save_episodes(podcast.title, podcast.episodes)
+            manager.file_manager.save_rss_cache(podcast.title, rss_content)
             
             logger.info(
                 "Successfully created PodcastManager for '%s' from RSS URL",
@@ -260,16 +227,42 @@ class PodcastManager:
 
     def download_episode(self, episode: Episode) -> Tuple[Optional[str], bool]:
         """Download single episode file."""
-        # Use centralized path management
-        download_path, was_downloaded = download_episode_file(
-            episode, self.path_manager, self.podcast.guid
+        # Get the target download path
+        download_path = self.file_manager.get_episode_audio_path(
+            self.podcast.title, episode
         )
-
-        if download_path and was_downloaded:
-            # Save episode metadata
-            self.storage_manager.save_episode_metadata(
-                episode, self.podcast.guid
+        
+        # Check if file already exists
+        if os.path.exists(download_path):
+            self.logger.info(
+                "Audio file already exists for episode %s: %s",
+                episode.id, download_path
             )
-            self.logger.debug("Saved metadata for episode %s", episode.id)
-
-        return download_path, was_downloaded
+            return download_path, False
+        
+        # Download the episode
+        try:
+            # Import here to avoid circular dependency
+            from .downloader import download_file_to_path
+            
+            _, success = download_file_to_path(
+                episode.audio_link, download_path
+            )
+            if success:
+                # Save episodes to JSONL (append or update)
+                episodes = self.file_manager.load_episodes(self.podcast.title)
+                # Remove existing episode if it exists
+                episodes = [ep for ep in episodes if ep.id != episode.id]
+                episodes.append(episode)
+                self.file_manager.save_episodes(self.podcast.title, episodes)
+                
+                self.logger.debug("Saved metadata for episode %s", episode.id)
+                return download_path, True
+            else:
+                self.logger.error("Failed to download episode %s", episode.id)
+                return None, False
+        except Exception as e:  # pylint: disable=broad-except
+            self.logger.error(
+                "Error downloading episode %s: %s", episode.id, e
+            )
+            return None, False
