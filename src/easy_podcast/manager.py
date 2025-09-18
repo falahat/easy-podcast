@@ -6,9 +6,8 @@ import logging
 import os
 from typing import List, Optional, Tuple
 
-from .path_manager import PathManager, get_base_data_dir
+from .path_manager import PathManager
 from .downloader import download_episode_file
-from .mapping_manager import MappingManager
 from .models import Episode, Podcast
 from .parser import PodcastParser
 from .storage_manager import StorageManager
@@ -27,22 +26,21 @@ class PodcastManager:
         self.base_data_dir = base_data_dir
 
         # Initialize new storage system components
-        self.mapping_manager = MappingManager(base_data_dir)
-        self.path_manager = PathManager(base_data_dir, self.mapping_manager)
+        self.path_manager = PathManager(base_data_dir)
         self.storage_manager = StorageManager(self.path_manager)
 
         # Ensure the podcast has a valid GUID
         if not getattr(self.podcast, 'guid', None):
             self.podcast.guid = self.podcast.rss_url
 
-        # Add podcast to mapping manager
-        self.mapping_manager.add_podcast(self.podcast.guid, self.podcast.title)
+        # Add podcast to path manager mappings
+        self.path_manager.add_podcast(self.podcast.guid, self.podcast.title)
 
-        # Add all episodes to mapping manager
+        # Add all episodes to path manager mappings
         for episode in self.podcast.episodes:
             if not getattr(episode, 'guid', None):
                 episode.guid = episode.id  # Fallback for compatibility
-            self.mapping_manager.add_episode(
+            self.path_manager.add_episode(
                 self.podcast.guid, episode.guid, episode.title
             )
 
@@ -113,9 +111,11 @@ class PodcastManager:
 
         try:
             # Get base data directory and set up storage components
+            # Import here to avoid circular dependency
+            from .path_manager import get_base_data_dir
+            
             base_data_dir = get_base_data_dir()
-            mapping_manager = MappingManager(base_data_dir)
-            path_manager = PathManager(base_data_dir, mapping_manager)
+            path_manager = PathManager(base_data_dir)
             storage_manager = StorageManager(path_manager)
 
             # Load podcast metadata
@@ -182,6 +182,9 @@ class PodcastManager:
         )
 
         # Set up data directory structure using new storage system
+        # Import here to avoid circular dependency
+        from .path_manager import get_base_data_dir
+        
         base_data_dir = get_base_data_dir()
         logger.info("Base data directory: %s", base_data_dir)
 
@@ -218,13 +221,6 @@ class PodcastManager:
         )
         
         return new_episodes
-
-    def get_downloads_dir_for_episode(self, episode: Episode) -> str:
-        """Get the downloads directory for a specific episode."""
-        audio_path = self.path_manager.get_episode_audio_path(
-            episode, self.podcast.guid
-        )
-        return os.path.dirname(audio_path)
 
     # Download Management
     def download_episodes(
@@ -264,14 +260,9 @@ class PodcastManager:
 
     def download_episode(self, episode: Episode) -> Tuple[Optional[str], bool]:
         """Download single episode file."""
-        # Ensure episode directory exists
-        episode_dir = self.path_manager.ensure_episode_dir_exists(
-            episode, self.podcast.guid
-        )
-        
-        # Download to the episode's specific directory
+        # Use centralized path management
         download_path, was_downloaded = download_episode_file(
-            episode, episode_dir
+            episode, self.path_manager, self.podcast.guid
         )
 
         if download_path and was_downloaded:

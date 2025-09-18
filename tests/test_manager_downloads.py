@@ -90,9 +90,12 @@ class TestPodcastManagerDownloads(PodcastTestBase):
         ) as mock_download:
             # Mock to return success for episode1, failure for episode2
             def mock_download_side_effect(  # type: ignore
-                episode, episode_dir
+                episode, path_manager, podcast_guid
             ):
                 if episode.id == "1":
+                    episode_dir = path_manager.get_episode_dir(
+                        episode, podcast_guid
+                    )
                     return (os.path.join(episode_dir, "1.mp3"), True)
                 else:
                     return (None, False)

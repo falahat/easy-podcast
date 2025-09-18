@@ -4,12 +4,15 @@ File downloading functionality for RSS feeds and episode audio files.
 
 import logging
 import os
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, TYPE_CHECKING
 
 import requests
 from tqdm import tqdm
 
 from .models import Episode
+
+if TYPE_CHECKING:
+    from .path_manager import PathManager
 
 
 # RSS Download Functions
@@ -57,37 +60,48 @@ def load_rss_from_file(rss_file_path: str) -> Optional[bytes]:
 
 # Episode Download Functions
 def download_episode_file(
-    episode: Episode, target_download_dir: str
+    episode: Episode, path_manager: "PathManager", podcast_guid: str
 ) -> Tuple[Optional[str], bool]:
     """Download single episode audio file.
+
+    Args:
+        episode: Episode object to download
+        path_manager: PathManager instance for file operations
+        podcast_guid: GUID of the podcast this episode belongs to
 
     Returns:
         Tuple of (file_path, was_downloaded).
     """
     logger = logging.getLogger(__name__)
 
-    if not target_download_dir:
-        logger.error("No download directory specified")
-        raise ValueError("No download directory specified")
-
     logger.debug(
-        "Downloading episode %s (%s) to %s",
+        "Downloading episode %s (%s)",
         episode.id,
         episode.title,
-        target_download_dir,
     )
 
-    return download_file_streamed(
-        episode.audio_link, episode.audio_filename, target_download_dir
-    )
+    # Get the target path from path_manager
+    target_path = path_manager.get_episode_audio_path(episode, podcast_guid)
+    
+    # Ensure the episode directory exists
+    path_manager.ensure_episode_dir_exists(episode, podcast_guid)
+
+    return download_file_to_path(episode.audio_link, target_path)
 
 
 def download_episodes_batch(
     episodes: List[Episode],
-    target_download_dir: str,
+    path_manager: "PathManager",  # Type hint with quotes for forward reference
+    podcast_guid: str,
     show_progress: bool = True,
 ) -> Tuple[int, int, int]:
     """Download multiple episodes with progress tracking.
+
+    Args:
+        episodes: List of Episode objects to download
+        path_manager: PathManager instance for file operations
+        podcast_guid: GUID of the podcast these episodes belong to
+        show_progress: Whether to show progress bars
 
     Returns:
         Tuple of (successful_downloads, skipped_files, failed_downloads).
@@ -98,14 +112,9 @@ def download_episodes_batch(
         logger.info("No episodes to download")
         return 0, 0, 0
 
-    if not target_download_dir:
-        logger.error("No download directory specified")
-        raise ValueError("No download directory specified")
-
     logger.info(
-        "Starting batch download of %d episodes to %s",
+        "Starting batch download of %d episodes",
         len(episodes),
-        target_download_dir,
     )
 
     successful_count = 0
@@ -128,7 +137,7 @@ def download_episodes_batch(
                 progress_bar.set_description(desc)
 
                 download_path, was_downloaded = download_episode_file(
-                    episode, target_download_dir
+                    episode, path_manager, podcast_guid
                 )
 
                 if download_path and was_downloaded:
@@ -154,7 +163,7 @@ def download_episodes_batch(
             )
 
             download_path, was_downloaded = download_episode_file(
-                episode, target_download_dir
+                episode, path_manager, podcast_guid
             )
             if download_path and was_downloaded:
                 successful_count += 1
@@ -177,17 +186,17 @@ def download_episodes_batch(
 
 
 # Helper Functions
-def download_file_streamed(
-    file_url: str, output_filename: str, output_directory: str
+def download_file_to_path(
+    file_url: str, output_path: str
 ) -> Tuple[Optional[str], bool]:
-    """Download file from URL with progress tracking."""
+    """Download file from URL to specific path."""
     logger = logging.getLogger(__name__)
-    output_path = os.path.join(output_directory, output_filename)
 
     if os.path.exists(output_path):
         logger.debug("File already exists: %s. Skipping.", output_path)
         return output_path, False
 
+    output_filename = os.path.basename(output_path)
     logger.info("Downloading %s from %s", output_filename, file_url)
     try:
         with requests.get(file_url, stream=True, timeout=30) as response:
@@ -219,3 +228,14 @@ def download_file_streamed(
             os.remove(output_path)  # Clean up partial file
             logger.debug("Cleaned up partial file: %s", output_path)
         return None, False
+
+
+def download_file_streamed(
+    file_url: str, output_filename: str, output_directory: str
+) -> Tuple[Optional[str], bool]:
+    """Download file from URL with progress tracking.
+    
+    DEPRECATED: Use download_file_to_path instead.
+    """
+    output_path = os.path.join(output_directory, output_filename)
+    return download_file_to_path(file_url, output_path)

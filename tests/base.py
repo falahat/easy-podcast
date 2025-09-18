@@ -9,7 +9,6 @@ import unittest
 from typing import Any, Dict, List
 from unittest.mock import Mock
 
-from easy_podcast.path_manager import set_base_data_dir
 from easy_podcast.models import Podcast
 
 
@@ -20,7 +19,9 @@ class PodcastTestBase(unittest.TestCase):
         """Set up temporary test directory and configure environment."""
         # Use tempfile for better isolation and automatic cleanup
         self.test_dir = tempfile.mkdtemp(prefix="podcast_test_")
-        set_base_data_dir(self.test_dir)
+        
+        # Set environment variable for centralized path management
+        os.environ["PODCAST_DATA_DIRECTORY"] = self.test_dir
 
     def tearDown(self) -> None:
         """Clean up test directory."""

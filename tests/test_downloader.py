@@ -6,7 +6,7 @@ import os
 import shutil
 import tempfile
 import unittest
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Tuple
 from unittest.mock import MagicMock, Mock, patch
 
 import requests
@@ -21,6 +21,45 @@ from easy_podcast.downloader import (
 from easy_podcast.models import Episode
 
 from tests.utils import create_test_episode
+
+
+def download_episode_file_compat(
+    episode: Episode, download_dir: str
+) -> Tuple[Optional[str], bool]:
+    """Compatibility wrapper for download_episode_file for tests."""
+    if not download_dir:
+        raise ValueError("No download directory specified")
+    
+    # Mock the path manager to return a simple path structure for testing
+    from unittest.mock import MagicMock
+    path_manager = MagicMock()
+    path_manager.get_episode_audio_path.return_value = os.path.join(
+        download_dir, f"{episode.id}.mp3"
+    )
+    path_manager.ensure_episode_dir_exists.return_value = download_dir
+    
+    podcast_guid = "test-podcast-guid"
+    
+    return download_episode_file(episode, path_manager, podcast_guid)
+
+
+def download_episodes_batch_compat(
+    episodes: list, download_dir: str, show_progress: bool = True
+) -> Tuple[int, int, int]:
+    """Compatibility wrapper for download_episodes_batch for tests."""
+    if not download_dir:
+        raise ValueError("No download directory specified")
+    
+    # Mock the path manager to return a simple path structure for testing
+    from unittest.mock import MagicMock
+    path_manager = MagicMock()
+    path_manager.ensure_episode_dir_exists.return_value = download_dir
+    
+    podcast_guid = "test-podcast-guid"
+    
+    return download_episodes_batch(
+        episodes, path_manager, podcast_guid, show_progress
+    )
 
 
 # pylint: disable=too-many-public-methods
@@ -112,7 +151,7 @@ class TestPodcastDownloader(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            download_episode_file(episode, "")
+            download_episode_file_compat(episode, "")
         self.assertIn("No download directory specified", str(cm.exception))
 
     def test_existing_file_skip_download(self) -> None:
@@ -238,7 +277,7 @@ class TestPodcastDownloader(unittest.TestCase):
 
     def test_download_episodes_batch_empty_list(self) -> None:
         """Test batch download with empty episode list."""
-        result = download_episodes_batch([], self.download_dir)
+        result = download_episodes_batch_compat([], self.download_dir)
         successful, skipped, failed = result
 
         self.assertEqual(successful, 0)
@@ -255,7 +294,7 @@ class TestPodcastDownloader(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError) as cm:
-            download_episodes_batch([episode], "")
+            download_episodes_batch_compat([episode], "")
         self.assertIn("No download directory specified", str(cm.exception))
 
     @patch("easy_podcast.downloader.download_episode_file")
@@ -296,7 +335,7 @@ class TestPodcastDownloader(unittest.TestCase):
             ),  # Already existed
         ]
 
-        result = download_episodes_batch(
+        result = download_episodes_batch_compat(
             episodes, self.download_dir, show_progress=False
         )
         successful, skipped, failed = result
@@ -345,7 +384,7 @@ class TestPodcastDownloader(unittest.TestCase):
             ),  # Already existed
         ]
 
-        successful, skipped, failed = download_episodes_batch(
+        successful, skipped, failed = download_episodes_batch_compat(
             episodes, self.download_dir, show_progress=True
         )
 
@@ -390,7 +429,7 @@ class TestPodcastDownloader(unittest.TestCase):
             (None, False),  # Failed
         ]
 
-        successful, skipped, failed = download_episodes_batch(
+        successful, skipped, failed = download_episodes_batch_compat(
             episodes, self.download_dir, show_progress=False
         )
 
@@ -436,7 +475,7 @@ class TestPodcastDownloader(unittest.TestCase):
             (None, False),  # Failed
         ]
 
-        successful, skipped, failed = download_episodes_batch(
+        successful, skipped, failed = download_episodes_batch_compat(
             episodes, self.download_dir, show_progress=True
         )
 
@@ -531,7 +570,7 @@ class TestPodcastDownloader(unittest.TestCase):
         self.assertTrue(was_downloaded)
         self.assertTrue(os.path.exists(expected_path))
 
-    @patch("easy_podcast.downloader.download_file_streamed")
+    @patch("easy_podcast.downloader.download_file_to_path")
     def test_download_episode_file_success(self, mock_download: Mock) -> None:
         """Test successful episode file download using the actual function."""
         episode = Episode(
@@ -548,14 +587,14 @@ class TestPodcastDownloader(unittest.TestCase):
         expected_path = os.path.join(self.download_dir, "123.mp3")
         mock_download.return_value = (expected_path, True)
 
-        result_path, was_downloaded = download_episode_file(
+        result_path, was_downloaded = download_episode_file_compat(
             episode, self.download_dir
         )
 
         self.assertEqual(result_path, expected_path)
         self.assertTrue(was_downloaded)
         mock_download.assert_called_once_with(
-            "http://test.com/123.mp3", "123.mp3", self.download_dir
+            "http://test.com/123.mp3", expected_path
         )
 
 

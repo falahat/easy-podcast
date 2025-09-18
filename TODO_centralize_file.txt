@@ -1,0 +1,151 @@
+# TODO: Centralize File Path Handling
+
+## Overview
+This document outlines the changes needed to fully centralize file path handling in the easy-podcast codebase. The goal is to ensure that `path_manager.py` is the ONLY place that handles file paths and directories, and that the base data directory is ONLY configurable via the `PODCAST_DATA_DIRECTORY` environment variable.
+
+## Environment Variable Requirement
+- **REQUIRED**: Set `PODCAST_DATA_DIRECTORY` environment variable
+- **DEFAULT**: If not set, use `"./data"` as the base directory
+- **REMOVE**: All other ways to set the data directory (CLI args, function parameters, etc.)
+
+## Files to Modify
+
+### 1. path_manager.py ✨ HIGH PRIORITY
+**Changes needed:**
+- ✅ Add environment variable support in DEFAULT_BASE_DATA_DIR
+- ✅ Add missing path methods for mapping files:
+  - `get_rss_mapping_path()`
+  - `get_podcast_mappings_path()`
+  - `get_episode_mappings_path(podcast_guid)`
+- ✅ Remove global functions that allow setting base_data_dir
+- ✅ Make path_manager the single source of truth for all paths
+
+**Current issues:**
+- Uses hardcoded "data" default instead of environment variable
+- Missing mapping file path methods
+- Global functions allow bypassing centralized control
+
+### 2. mapping_manager.py 🔴 CRITICAL
+**Changes needed:**
+- ❌ REMOVE all hardcoded path construction from __init__()
+- ❌ REMOVE direct os.path.join() usage
+- ❌ REMOVE os.makedirs() calls
+- ✅ Use path_manager for ALL file paths
+- ✅ Accept path_manager as constructor parameter
+
+**Current issues:**
+- Lines 21-26: Hardcoded mapping file paths
+- Lines 135-139: Direct path construction for episode mappings
+- Lines 188-192: Direct path construction for episode mappings
+- Lines 174-177: Direct os.makedirs() usage
+
+### 3. downloader.py 🔴 CRITICAL
+**Changes needed:**
+- ❌ REMOVE target_download_dir parameters
+- ❌ REMOVE direct os.path.join() usage (lines 68-72, 178-220)
+- ✅ Accept path_manager and podcast_guid parameters instead
+- ✅ Use path_manager.get_episode_audio_path() for all paths
+- ✅ Use path_manager.ensure_episode_dir_exists() for directory creation
+
+**Current issues:**
+- Functions take directory paths as parameters
+- Direct file path construction in download_file_streamed()
+- No integration with centralized path management
+
+### 4. manager.py 🟡 MEDIUM PRIORITY
+**Changes needed:**
+- ❌ REMOVE get_downloads_dir_for_episode() method
+- ✅ Update download_episode() to pass path_manager to downloader
+- ✅ Ensure all path operations go through path_manager
+
+**Current issues:**
+- get_downloads_dir_for_episode() uses os.path.dirname() directly
+- Some redundant path wrapper methods
+
+### 5. cli.py 🟡 MEDIUM PRIORITY
+**Changes needed:**
+- ❌ REMOVE --data-dir command line argument
+- ❌ REMOVE set_base_data_dir() call
+- ✅ Add validation that PODCAST_DATA_DIRECTORY is set
+- ✅ Show clear error if environment variable missing
+
+**Current issues:**
+- Allows setting data directory via CLI argument
+- Should only use environment variable
+
+### 6. storage_manager.py ✅ ALREADY GOOD
+**Status:** Already properly centralized
+- Uses path_manager for all file paths
+- No direct path construction
+- Good example of proper architecture
+
+### 7. models.py ✅ ALREADY GOOD
+**Status:** Clean data objects
+- No filepath responsibilities
+- Only has filename properties (not full paths)
+- Proper separation of concerns
+
+## Implementation Steps
+
+### Phase 1: Core Infrastructure (CRITICAL)
+1. ✅ Update path_manager.py to use PODCAST_DATA_DIRECTORY environment variable
+2. ✅ Add missing mapping file path methods to path_manager.py
+3. ✅ Remove global path configuration functions
+
+### Phase 2: Remove Hardcoded Paths (CRITICAL)
+4. ✅ Refactor mapping_manager.py to use path_manager for all paths
+5. ✅ Update mapping_manager constructor to accept path_manager
+
+### Phase 3: Centralize Download Operations (CRITICAL)
+6. ✅ Refactor downloader.py functions to use path_manager
+7. ✅ Remove directory parameters from download functions
+8. ✅ Update all callers of download functions
+
+### Phase 4: Clean Up Manager and CLI (MEDIUM)
+9. ✅ Update manager.py to use new downloader interface
+10. ✅ Remove direct path operations from manager.py
+11. ✅ Update cli.py to only use environment variable
+
+### Phase 5: Testing and Validation (HIGH)
+12. ✅ Update test files to work with new architecture
+13. ✅ Run all tests to ensure functionality works
+14. ✅ Validate that only environment variable controls data directory
+
+## Expected Benefits
+- ✅ Single source of truth for all file paths
+- ✅ Consistent path handling across entire codebase
+- ✅ Easier testing with path injection
+- ✅ Clear configuration via environment variable only
+- ✅ Reduced coupling between components
+- ✅ Better separation of concerns
+
+## Files That Should NOT Change
+- utils.py ✅ (only has filename sanitization, no paths)
+- parser.py ✅ (no file path operations)
+- models.py ✅ (clean data objects)
+
+## Validation Checklist
+After implementation, verify:
+- [ ] Only path_manager.py contains os.path operations
+- [ ] Only PODCAST_DATA_DIRECTORY environment variable sets base directory
+- [ ] All file operations go through path_manager
+- [ ] No hardcoded paths anywhere in codebase
+- [ ] All tests pass
+- [ ] CLI shows clear error if PODCAST_DATA_DIRECTORY not set
+- [ ] mapping_manager uses path_manager for all paths
+- [ ] downloader uses path_manager for all paths
+
+## Risk Areas
+- **mapping_manager.py**: Heavy refactoring needed, many path operations
+- **downloader.py**: Function signatures will change, affects callers
+- **Test compatibility**: Tests may need updates for new architecture
+- **Backward compatibility**: Removing CLI --data-dir argument is breaking change
+
+---
+**PRIORITY ORDER:**
+1. 🔴 CRITICAL: path_manager.py environment variable support
+2. 🔴 CRITICAL: mapping_manager.py refactoring
+3. 🔴 CRITICAL: downloader.py refactoring
+4. 🟡 MEDIUM: manager.py cleanup
+5. 🟡 MEDIUM: cli.py updates
+6. 🟢 LOW: Test updates

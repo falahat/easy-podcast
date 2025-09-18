@@ -3,10 +3,10 @@ Command-line interface for the podcast downloader.
 """
 
 import argparse
+import os
 import sys
 
 from .manager import PodcastManager
-from .path_manager import set_base_data_dir
 from .utils import format_bytes
 
 
@@ -16,11 +16,6 @@ def main() -> None:
         description="Download podcast episodes from RSS feeds"
     )
     parser.add_argument("rss_url", help="URL of the podcast RSS feed")
-    parser.add_argument(
-        "--data-dir",
-        default="data",
-        help="Directory to store downloaded episodes and metadata",
-    )
     parser.add_argument(
         "--no-progress", action="store_true", help="Disable progress bars"
     )
@@ -33,8 +28,21 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
-        # Set global base data directory
-        set_base_data_dir(args.data_dir)
+        # Check if PODCAST_DATA_DIRECTORY environment variable is set
+        data_dir = os.getenv("PODCAST_DATA_DIRECTORY")
+        if not data_dir:
+            print(
+                "Error: PODCAST_DATA_DIRECTORY environment variable "
+                "must be set.",
+                file=sys.stderr,
+            )
+            print(
+                "Example: export PODCAST_DATA_DIRECTORY=/path/to/podcast/data",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        print(f"Using data directory: {data_dir}")
 
         # Initialize manager from RSS URL
         manager = PodcastManager.from_rss_url(args.rss_url)

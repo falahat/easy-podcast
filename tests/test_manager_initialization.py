@@ -6,7 +6,6 @@ import os
 from typing import Any, Dict, List
 from unittest.mock import Mock, patch
 
-from easy_podcast.path_manager import get_base_data_dir
 from easy_podcast.manager import PodcastManager
 from easy_podcast.models import Podcast
 
@@ -32,8 +31,8 @@ class TestPodcastManagerInitialization(PodcastTestBase):
 
         manager = PodcastManager(test_podcast_dir, test_podcast)
 
-        # Config should be set to the test directory
-        self.assertEqual(get_base_data_dir(), self.test_dir)
+        # Manager should have its own path manager with the correct directory
+        self.assertEqual(manager.path_manager.base_data_dir, test_podcast_dir)
         self.assertIsNotNone(manager.podcast)
         self.assertIsNotNone(manager.storage_manager)
         self.assertIsNotNone(manager.path_manager)

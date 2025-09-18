@@ -2,7 +2,9 @@
 Tests for the CLI module.
 """
 
+import os
 import sys
+import tempfile
 from io import StringIO
 from typing import Any
 from unittest.mock import Mock, patch
@@ -15,6 +17,21 @@ from easy_podcast.models import Episode, Podcast
 
 class TestCLI:
     """Test cases for CLI functionality."""
+
+    def setup_method(self) -> None:
+        """Set up test environment."""
+        self.test_dir = tempfile.mkdtemp(prefix="cli_test_")
+        self.env_patcher = patch.dict(
+            os.environ, {"PODCAST_DATA_DIRECTORY": self.test_dir}
+        )
+        self.env_patcher.start()
+
+    def teardown_method(self) -> None:
+        """Clean up test environment."""
+        self.env_patcher.stop()
+        import shutil
+        if hasattr(self, 'test_dir') and os.path.exists(self.test_dir):
+            shutil.rmtree(self.test_dir)
 
     def test_cli_help_message(self) -> None:
         """Test that CLI shows help message correctly."""
@@ -93,7 +110,7 @@ class TestCLI:
 
     @patch("easy_podcast.cli.PodcastManager")
     def test_cli_custom_data_directory(self, mock_manager_class: Any) -> None:
-        """Test CLI with custom data directory."""
+        """Test CLI with custom data directory via environment variable."""
         mock_manager_class.from_rss_url.return_value = None
 
         with patch.object(
@@ -101,15 +118,14 @@ class TestCLI:
             "argv",
             [
                 "podcast-download",
-                "--data-dir",
-                "/custom/path",
                 "http://example.com/feed.xml",
             ],
         ):
-            with patch("sys.stderr", StringIO()):
-                with pytest.raises(SystemExit) as excinfo:
-                    main()
-                assert excinfo.value.code == 1
+            with patch.dict(os.environ, {"PODCAST_DATA_DIRECTORY": "/custom/path"}):
+                with patch("sys.stderr", StringIO()):
+                    with pytest.raises(SystemExit) as excinfo:
+                        main()
+                    assert excinfo.value.code == 1
 
         mock_manager_class.from_rss_url.assert_called_once_with(
             "http://example.com/feed.xml"
