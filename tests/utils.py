@@ -41,6 +41,7 @@ def create_test_episode(**kwargs: Any) -> Episode:
         "size": 1024,
         "audio_link": "http://example.com/test.mp3",
         "image": "http://example.com/image.jpg",
+        "guid": "",  # Default empty GUID like in Episode model
     }
     defaults.update(kwargs)
     return Episode(**defaults)

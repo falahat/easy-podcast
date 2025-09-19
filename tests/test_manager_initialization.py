@@ -6,7 +6,10 @@ import os
 from typing import Any, Dict, List
 from unittest.mock import Mock, patch
 
-from easy_podcast.factory import create_manager_from_rss, create_manager_from_storage
+from easy_podcast.factory import (
+    create_manager_from_rss,
+    create_manager_from_storage,
+)
 from easy_podcast.models import Podcast
 from easy_podcast.manager import PodcastManager
 from easy_podcast.repository import PodcastRepository
@@ -111,7 +114,7 @@ class TestPodcastManagerInitialization(PodcastTestBase):
         """Test from_podcast_folder with non-existent title."""
         # Test with a title that doesn't exist
         fake_title = "Nonexistent Podcast"
-        manager = PodcastManager.from_podcast_folder(fake_title, self.test_dir)
+        manager = create_manager_from_storage(fake_title, self.test_dir)
 
         # Verify the manager creation failed
         self.assertIsNone(
@@ -122,9 +125,7 @@ class TestPodcastManagerInitialization(PodcastTestBase):
         """Test from_podcast_folder with invalid title format."""
         # Test with an invalid title format (empty)
         invalid_title = ""
-        manager = PodcastManager.from_podcast_folder(
-            invalid_title, self.test_dir
-        )
+        manager = create_manager_from_storage(invalid_title, self.test_dir)
 
         # Verify the manager creation failed
         self.assertIsNone(
@@ -142,7 +143,7 @@ class TestPodcastManagerInitialization(PodcastTestBase):
             mock_response.raise_for_status.return_value = None
             mock_get.return_value = mock_response
 
-            initial_manager = PodcastManager.from_rss_url(
+            initial_manager = create_manager_from_rss(
                 "http://test.com/empty_rss", self.test_dir
             )
             self.assertIsNotNone(initial_manager)
@@ -150,9 +151,7 @@ class TestPodcastManagerInitialization(PodcastTestBase):
             podcast_title = initial_manager.podcast.title
 
         # Now test loading from existing storage
-        manager = PodcastManager.from_podcast_folder(
-            podcast_title, self.test_dir
-        )
+        manager = create_manager_from_storage(podcast_title, self.test_dir)
 
         # Verify the manager was created successfully even with no episodes
         self.assertIsNotNone(
@@ -188,9 +187,7 @@ class TestPodcastManagerInitialization(PodcastTestBase):
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
 
-        manager = PodcastManager.from_rss_url(
-            "http://test.com/rss", self.test_dir
-        )
+        manager = create_manager_from_rss("http://test.com/rss", self.test_dir)
 
         self.assertIsNotNone(manager)
         if manager:
@@ -207,8 +204,6 @@ class TestPodcastManagerInitialization(PodcastTestBase):
             "Network error"
         )
 
-        manager = PodcastManager.from_rss_url(
-            "http://test.com/rss", self.test_dir
-        )
+        manager = create_manager_from_rss("http://test.com/rss", self.test_dir)
 
         self.assertIsNone(manager)

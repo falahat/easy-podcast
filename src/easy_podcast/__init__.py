@@ -12,7 +12,7 @@ from .models import Episode, Podcast
 
 __all__ = [
     "create_manager_from_rss",
-    "create_manager_from_storage", 
+    "create_manager_from_storage",
     "PodcastManager",
     "Episode",
     "Podcast",

@@ -6,7 +6,7 @@ import os
 from typing import Any, Dict, List
 from unittest.mock import Mock, patch
 
-from easy_podcast.manager import PodcastManager
+from easy_podcast.factory import create_manager_from_rss
 from easy_podcast.models import Podcast
 
 from tests.base import PodcastTestBase
@@ -16,8 +16,8 @@ from tests.utils import create_test_episode
 class TestPodcastManagerRSS(PodcastTestBase):
     """Test suite for PodcastManager RSS handling functionality."""
 
-    @patch("easy_podcast.parser.PodcastParser.from_content")
-    @patch("easy_podcast.downloader.download_rss_from_url")
+    @patch("easy_podcast.factory.PodcastParser.from_content")
+    @patch("easy_podcast.factory.download_rss_from_url")
     def test_ingest_rss_data_success(
         self, mock_download_rss: Mock, mock_parse_content: Mock
     ) -> None:
@@ -51,9 +51,7 @@ class TestPodcastManagerRSS(PodcastTestBase):
         )
         mock_parse_content.return_value = mock_podcast
 
-        manager = PodcastManager.from_rss_url(
-            "http://test.com/rss", self.test_dir
-        )
+        manager = create_manager_from_rss("http://test.com/rss", self.test_dir)
 
         self.assertIsNotNone(manager)
         if manager:
@@ -61,26 +59,21 @@ class TestPodcastManagerRSS(PodcastTestBase):
             self.assertEqual(podcast.title, "Test Podcast")
             self.assertEqual(len(podcast.episodes), 1)
 
-            self.assertIsNotNone(manager.file_manager)
             # Check that podcast directory exists
-            podcast_dir = manager.file_manager.get_podcast_dir(
-                manager.podcast.title
-            )
+            podcast_dir = manager.get_podcast_data_dir()
             self.assertTrue(os.path.exists(podcast_dir))
 
-    @patch("easy_podcast.downloader.download_rss_from_url")
+    @patch("easy_podcast.factory.download_rss_from_url")
     def test_ingest_rss_data_failure(self, mock_download_rss: Mock) -> None:
         """Test RSS ingestion failure using static method."""
         mock_download_rss.return_value = None
 
-        manager = PodcastManager.from_rss_url(
-            "http://test.com/rss", self.test_dir
-        )
+        manager = create_manager_from_rss("http://test.com/rss", self.test_dir)
 
         self.assertIsNone(manager)
 
-    @patch("easy_podcast.parser.PodcastParser.from_content")
-    @patch("easy_podcast.downloader.download_rss_from_url")
+    @patch("easy_podcast.factory.PodcastParser.from_content")
+    @patch("easy_podcast.factory.download_rss_from_url")
     def test_empty_rss_feed(
         self, mock_download_rss: Mock, mock_parse_content: Mock
     ) -> None:
@@ -98,9 +91,7 @@ class TestPodcastManagerRSS(PodcastTestBase):
         )
         mock_parse_content.return_value = mock_podcast
 
-        manager = PodcastManager.from_rss_url(
-            "http://test.com/rss", self.test_dir
-        )
+        manager = create_manager_from_rss("http://test.com/rss", self.test_dir)
 
         self.assertIsNotNone(manager)
         if manager:
@@ -108,8 +99,8 @@ class TestPodcastManagerRSS(PodcastTestBase):
             self.assertEqual(len(podcast.episodes), 0)
             self.assertEqual(len(manager.get_new_episodes()), 0)
 
-    @patch("easy_podcast.parser.PodcastParser.from_content")
-    @patch("easy_podcast.downloader.download_rss_from_url")
+    @patch("easy_podcast.factory.PodcastParser.from_content")
+    @patch("easy_podcast.factory.download_rss_from_url")
     def test_rss_feed_missing_title(
         self, mock_download_rss: Mock, mock_parse_content: Mock
     ) -> None:
@@ -127,9 +118,7 @@ class TestPodcastManagerRSS(PodcastTestBase):
         )
         mock_parse_content.return_value = mock_podcast
 
-        manager = PodcastManager.from_rss_url(
-            "http://test.com/rss", self.test_dir
-        )
+        manager = create_manager_from_rss("http://test.com/rss", self.test_dir)
 
         self.assertIsNotNone(manager)
         if manager:
@@ -138,8 +127,8 @@ class TestPodcastManagerRSS(PodcastTestBase):
 
         mock_download_rss.assert_called_once_with("http://test.com/rss")
 
-    @patch("easy_podcast.parser.PodcastParser.from_content")
-    @patch("easy_podcast.downloader.download_rss_from_url")
+    @patch("easy_podcast.factory.PodcastParser.from_content")
+    @patch("easy_podcast.factory.download_rss_from_url")
     def test_sanitized_podcast_title(
         self, mock_download_rss: Mock, mock_parse_content: Mock
     ) -> None:
@@ -159,22 +148,17 @@ class TestPodcastManagerRSS(PodcastTestBase):
         )
         mock_parse_content.return_value = mock_podcast
 
-        manager = PodcastManager.from_rss_url(
-            "http://test.com/rss", self.test_dir
-        )
+        manager = create_manager_from_rss("http://test.com/rss", self.test_dir)
 
         self.assertIsNotNone(manager)
         # Check that the directory path was created successfully
         if manager:
-            self.assertIsNotNone(manager.file_manager)
             # Check that podcast directory exists
-            podcast_dir = manager.file_manager.get_podcast_dir(
-                manager.podcast.title
-            )
+            podcast_dir = manager.get_podcast_data_dir()
             self.assertTrue(os.path.exists(podcast_dir))
 
-    @patch("easy_podcast.parser.PodcastParser.from_content")
-    @patch("easy_podcast.downloader.download_rss_from_url")
+    @patch("easy_podcast.factory.PodcastParser.from_content")
+    @patch("easy_podcast.factory.download_rss_from_url")
     def test_rss_content_saved_to_file(
         self, mock_download_rss: Mock, mock_parse_content: Mock
     ) -> None:
@@ -211,9 +195,7 @@ class TestPodcastManagerRSS(PodcastTestBase):
         )
         mock_parse_content.return_value = mock_podcast
 
-        manager = PodcastManager.from_rss_url(
-            "http://test.com/rss", self.test_dir
-        )
+        manager = create_manager_from_rss("http://test.com/rss", self.test_dir)
 
         # Verify manager was created
         self.assertIsNotNone(manager)

@@ -1,7 +1,8 @@
 """
 Factory functions for creating PodcastManager instances.
 
-This module provides simple factory functions that wire up dependencies clearly.
+This module provides simple factory functions that wire up dependencies
+clearly.
 """
 
 import logging
@@ -10,9 +11,36 @@ from typing import Optional
 from .downloader import download_rss_from_url
 from .episode_downloader import EpisodeDownloader
 from .manager import PodcastManager
+from .models import Podcast
 from .parser import PodcastParser
 from .repository import PodcastRepository
 from .storage import Storage
+
+
+def _create_dependencies(
+    data_dir: str,
+) -> tuple[Storage, PodcastRepository, EpisodeDownloader]:
+    """Create shared dependencies for PodcastManager."""
+    storage = Storage(data_dir)
+    repository = PodcastRepository(storage)
+    downloader = EpisodeDownloader(storage)
+    return storage, repository, downloader
+
+
+def _create_manager(
+    podcast: Podcast,
+    repository: PodcastRepository,
+    downloader: EpisodeDownloader,
+) -> PodcastManager:
+    """Create PodcastManager with given dependencies."""
+    manager = PodcastManager(podcast, repository, downloader)
+    logger = logging.getLogger(__name__)
+    logger.info(
+        "Successfully created PodcastManager for '%s' with %d episodes",
+        podcast.title,
+        len(podcast.episodes),
+    )
+    return manager
 
 
 def create_manager_from_rss(
@@ -36,25 +64,19 @@ def create_manager_from_rss(
         return None
 
     # Create dependencies
-    storage = Storage(data_dir)
-    repository = PodcastRepository(storage)
-    downloader = EpisodeDownloader(storage)
+    _storage, repository, downloader = _create_dependencies(data_dir)
 
     # Save podcast metadata
     repository.save_podcast_metadata(podcast)
+
+    # Save episodes
+    repository.save_episodes(podcast.title, podcast.episodes)
 
     # Save RSS cache
     repository.save_rss_cache(podcast.title, rss_content)
 
     # Create and return manager
-    manager = PodcastManager(podcast, repository, downloader)
-    logger.info(
-        "Successfully created PodcastManager for '%s' with %d episodes",
-        podcast.title,
-        len(podcast.episodes),
-    )
-
-    return manager
+    return _create_manager(podcast, repository, downloader)
 
 
 def create_manager_from_storage(
@@ -65,8 +87,7 @@ def create_manager_from_storage(
     logger.info("Loading PodcastManager from storage: %s", podcast_title)
 
     # Create dependencies
-    storage = Storage(data_dir)
-    repository = PodcastRepository(storage)
+    _storage, repository, downloader = _create_dependencies(data_dir)
 
     # Load podcast metadata
     podcast = repository.load_podcast_metadata(podcast_title)
@@ -78,18 +99,8 @@ def create_manager_from_storage(
     episodes = repository.load_episodes(podcast_title)
     podcast.episodes = episodes
 
-    # Create downloader
-    downloader = EpisodeDownloader(storage)
-
     # Create and return manager
-    manager = PodcastManager(podcast, repository, downloader)
-    logger.info(
-        "Successfully loaded PodcastManager for '%s' with %d episodes",
-        podcast.title,
-        len(podcast.episodes),
-    )
-
-    return manager
+    return _create_manager(podcast, repository, downloader)
 
 
 def list_available_podcasts(data_dir: str = "./data") -> list[str]:

@@ -6,9 +6,9 @@ import os
 import shutil
 import tempfile
 import unittest
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from unittest.mock import Mock
-
+from easy_podcast.manager import PodcastManager
 from easy_podcast.models import Podcast
 
 
@@ -126,6 +126,34 @@ class PodcastTestBase(unittest.TestCase):
     def get_xml_fragment() -> bytes:
         """Get XML fragment for testing."""
         return b"<title>Test Episode</title>"
+
+    def create_manager(
+        self, podcast: Podcast, data_dir: Optional[str] = None
+    ) -> "PodcastManager":
+        """Create a properly configured PodcastManager for testing.
+
+        Args:
+            podcast: The podcast object
+            data_dir: Optional data directory, defaults to test_dir
+
+        Returns:
+            Configured PodcastManager instance
+        """
+        from easy_podcast.episode_downloader import EpisodeDownloader
+        from easy_podcast.manager import PodcastManager
+        from easy_podcast.repository import PodcastRepository
+        from easy_podcast.storage import Storage
+
+        if data_dir is None:
+            data_dir = self.test_dir
+
+        # Create dependencies
+        storage = Storage(data_dir)
+        repository = PodcastRepository(storage)
+        downloader = EpisodeDownloader(storage)
+
+        # Create and return manager
+        return PodcastManager(podcast, repository, downloader)
 
 
 class IntegrationTestBase(PodcastTestBase):

@@ -12,6 +12,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from easy_podcast.cli import main
+from easy_podcast.episode_downloader import DownloadSummary
 from easy_podcast.models import Episode, Podcast
 
 
@@ -48,14 +49,14 @@ class TestCLI:
                 main()
             assert excinfo.value.code == 2
 
-    @patch("easy_podcast.cli.PodcastManager")
+    @patch("easy_podcast.cli.create_manager_from_rss")
     def test_cli_successful_download_workflow(
-        self, mock_manager_class: Any
+        self, mock_create_manager: Any
     ) -> None:
         """Test complete CLI workflow with successful downloads."""
         # Mock the manager instance
         mock_manager = Mock()
-        mock_manager_class.from_rss_url.return_value = mock_manager
+        mock_create_manager.return_value = mock_manager
 
         # Create mock podcast and episodes
         mock_podcast = Mock(spec=Podcast)
@@ -74,12 +75,13 @@ class TestCLI:
 
         # Configure manager mocks
         mock_manager.podcast = mock_podcast
+        mock_manager.get_podcast_data_dir.return_value = (
+            "/test/data/Test_Podcast"
+        )
         mock_manager.get_new_episodes.return_value = mock_episodes
-        mock_manager.download_episodes.return_value = (
-            2,
-            0,
-            0,
-        )  # successful, skipped, failed
+        mock_manager.download_episodes.return_value = DownloadSummary(
+            successful=2, skipped=0, failed=0, results=[]
+        )
 
         # Capture stdout
         captured_output = StringIO()
@@ -93,8 +95,8 @@ class TestCLI:
         output = captured_output.getvalue()
 
         # Verify manager was initialized correctly
-        mock_manager_class.from_rss_url.assert_called_once_with(
-            "http://example.com/feed.xml"
+        mock_create_manager.assert_called_once_with(
+            "http://example.com/feed.xml", self.test_dir
         )
 
         # Verify episode retrieval and download
@@ -109,10 +111,10 @@ class TestCLI:
         assert "Episode 2 (2.00 MiB)" in output
         assert "Successfully downloaded: 2" in output
 
-    @patch("easy_podcast.cli.PodcastManager")
-    def test_cli_custom_data_directory(self, mock_manager_class: Any) -> None:
+    @patch("easy_podcast.cli.create_manager_from_rss")
+    def test_cli_custom_data_directory(self, mock_create_manager: Any) -> None:
         """Test CLI with custom data directory via environment variable."""
-        mock_manager_class.from_rss_url.return_value = None
+        mock_create_manager.return_value = None
 
         with patch.object(
             sys,
@@ -130,15 +132,15 @@ class TestCLI:
                         main()
                     assert excinfo.value.code == 1
 
-        mock_manager_class.from_rss_url.assert_called_once_with(
-            "http://example.com/feed.xml"
+        mock_create_manager.assert_called_once_with(
+            "http://example.com/feed.xml", "/custom/path"
         )
 
-    @patch("easy_podcast.cli.PodcastManager")
-    def test_cli_list_only_mode(self, mock_manager_class: Any) -> None:
+    @patch("easy_podcast.cli.create_manager_from_rss")
+    def test_cli_list_only_mode(self, mock_create_manager: Any) -> None:
         """Test CLI in list-only mode (no downloads)."""
         mock_manager = Mock()
-        mock_manager_class.from_rss_url.return_value = mock_manager
+        mock_create_manager.return_value = mock_manager
 
         mock_podcast = Mock(spec=Podcast)
         mock_podcast.title = "Test Podcast"
@@ -170,11 +172,11 @@ class TestCLI:
         assert "Found 1 new episodes" in output
         assert "Episode 1 (1.00 MiB)" in output
 
-    @patch("easy_podcast.cli.PodcastManager")
-    def test_cli_no_progress_mode(self, mock_manager_class: Any) -> None:
+    @patch("easy_podcast.cli.create_manager_from_rss")
+    def test_cli_no_progress_mode(self, mock_create_manager: Any) -> None:
         """Test CLI with progress bars disabled."""
         mock_manager = Mock()
-        mock_manager_class.from_rss_url.return_value = mock_manager
+        mock_create_manager.return_value = mock_manager
 
         mock_podcast = Mock(spec=Podcast)
         mock_podcast.title = "Test Podcast"
@@ -185,8 +187,13 @@ class TestCLI:
         mock_episode.size = 1024 * 1024
 
         mock_manager.podcast = mock_podcast
+        mock_manager.get_podcast_data_dir.return_value = (
+            "/test/data/Test_Podcast"
+        )
         mock_manager.get_new_episodes.return_value = [mock_episode]
-        mock_manager.download_episodes.return_value = (1, 0, 0)
+        mock_manager.download_episodes.return_value = DownloadSummary(
+            successful=1, skipped=0, failed=0, results=[]
+        )
 
         with patch.object(
             sys,
@@ -203,10 +210,12 @@ class TestCLI:
         # Verify progress was disabled
         mock_manager.download_episodes.assert_called_once_with([mock_episode])
 
-    @patch("easy_podcast.cli.PodcastManager")
-    def test_cli_rss_feed_parse_failure(self, mock_manager_class: Any) -> None:
+    @patch("easy_podcast.cli.create_manager_from_rss")
+    def test_cli_rss_feed_parse_failure(
+        self, mock_create_manager: Any
+    ) -> None:
         """Test CLI when RSS feed parsing fails."""
-        mock_manager_class.from_rss_url.return_value = None
+        mock_create_manager.return_value = None
 
         captured_error = StringIO()
 
@@ -226,11 +235,11 @@ class TestCLI:
             in error_output
         )
 
-    @patch("easy_podcast.cli.PodcastManager")
-    def test_cli_no_new_episodes(self, mock_manager_class: Any) -> None:
+    @patch("easy_podcast.cli.create_manager_from_rss")
+    def test_cli_no_new_episodes(self, mock_create_manager: Any) -> None:
         """Test CLI when no new episodes are found."""
         mock_manager = Mock()
-        mock_manager_class.from_rss_url.return_value = mock_manager
+        mock_create_manager.return_value = mock_manager
 
         mock_podcast = Mock(spec=Podcast)
         mock_podcast.title = "Test Podcast"
@@ -256,13 +265,13 @@ class TestCLI:
         assert "Found 0 new episodes" in output
         assert "No new episodes to download" in output
 
-    @patch("easy_podcast.cli.PodcastManager")
+    @patch("easy_podcast.cli.create_manager_from_rss")
     def test_cli_partial_download_failure(
-        self, mock_manager_class: Any
+        self, mock_create_manager: Any
     ) -> None:
         """Test CLI when some downloads fail."""
         mock_manager = Mock()
-        mock_manager_class.from_rss_url.return_value = mock_manager
+        mock_create_manager.return_value = mock_manager
 
         mock_podcast = Mock(spec=Podcast)
         mock_podcast.title = "Test Podcast"
@@ -273,12 +282,13 @@ class TestCLI:
         mock_episode.size = 1024 * 1024
 
         mock_manager.podcast = mock_podcast
+        mock_manager.get_podcast_data_dir.return_value = (
+            "/test/data/Test_Podcast"
+        )
         mock_manager.get_new_episodes.return_value = [mock_episode]
-        mock_manager.download_episodes.return_value = (
-            0,
-            0,
-            1,
-        )  # successful, skipped, failed
+        mock_manager.download_episodes.return_value = DownloadSummary(
+            successful=0, skipped=0, failed=1, results=[]
+        )
 
         captured_output = StringIO()
 
@@ -293,10 +303,10 @@ class TestCLI:
         output = captured_output.getvalue()
         assert "Failed downloads: 1" in output
 
-    @patch("easy_podcast.cli.PodcastManager")
-    def test_cli_keyboard_interrupt(self, mock_manager_class: Any) -> None:
+    @patch("easy_podcast.cli.create_manager_from_rss")
+    def test_cli_keyboard_interrupt(self, mock_create_manager: Any) -> None:
         """Test CLI handling of keyboard interrupt."""
-        mock_manager_class.from_rss_url.side_effect = KeyboardInterrupt()
+        mock_create_manager.side_effect = KeyboardInterrupt()
 
         captured_error = StringIO()
 
@@ -311,12 +321,10 @@ class TestCLI:
         error_output = captured_error.getvalue()
         assert "Download interrupted by user" in error_output
 
-    @patch("easy_podcast.cli.PodcastManager")
-    def test_cli_unexpected_exception(self, mock_manager_class: Any) -> None:
+    @patch("easy_podcast.cli.create_manager_from_rss")
+    def test_cli_unexpected_exception(self, mock_create_manager: Any) -> None:
         """Test CLI handling of unexpected exceptions."""
-        mock_manager_class.from_rss_url.side_effect = Exception(
-            "Unexpected error"
-        )
+        mock_create_manager.side_effect = Exception("Unexpected error")
 
         captured_error = StringIO()
 
@@ -331,11 +339,13 @@ class TestCLI:
         error_output = captured_error.getvalue()
         assert "Error: Unexpected error" in error_output
 
-    @patch("easy_podcast.cli.PodcastManager")
-    def test_cli_mixed_download_results(self, mock_manager_class: Any) -> None:
+    @patch("easy_podcast.cli.create_manager_from_rss")
+    def test_cli_mixed_download_results(
+        self, mock_create_manager: Any
+    ) -> None:
         """Test CLI with mixed download results (success, skip, fail)."""
         mock_manager = Mock()
-        mock_manager_class.from_rss_url.return_value = mock_manager
+        mock_create_manager.return_value = mock_manager
 
         mock_podcast = Mock(spec=Podcast)
         mock_podcast.title = "Test Podcast"
@@ -346,12 +356,13 @@ class TestCLI:
         mock_episode.size = 1024 * 1024
 
         mock_manager.podcast = mock_podcast
+        mock_manager.get_podcast_data_dir.return_value = (
+            "/test/data/Test_Podcast"
+        )
         mock_manager.get_new_episodes.return_value = [mock_episode]
-        mock_manager.download_episodes.return_value = (
-            2,
-            1,
-            0,
-        )  # successful, skipped, failed
+        mock_manager.download_episodes.return_value = DownloadSummary(
+            successful=2, skipped=1, failed=0, results=[]
+        )
 
         captured_output = StringIO()
 

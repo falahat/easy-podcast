@@ -106,7 +106,7 @@ class PodcastParser:
         self.logger.debug("Processing %d feed entries", len(feed_entries))
 
         for entry in feed_entries:
-            episode = self._parse_entry_to_episode(entry)
+            episode = self._parse_entry_to_episode(entry, podcast_guid)
             if episode:
                 podcast.episodes.append(episode)
 
@@ -119,7 +119,7 @@ class PodcastParser:
         return podcast
 
     def _parse_entry_to_episode(
-        self, entry: Dict[str, Any]
+        self, entry: Dict[str, Any], podcast_guid: str = ""
     ) -> Optional[Episode]:
         """Convert feed entry to Episode object."""
         # Extract both the supercast ID (for backward compatibility)
@@ -168,4 +168,5 @@ class PodcastParser:
             audio_link=audio_url,
             size=audio_size,
             guid=episode_guid,  # Add the GUID field
+            podcast_guid=podcast_guid,  # Add the podcast reference
         )

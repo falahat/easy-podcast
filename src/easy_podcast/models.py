@@ -4,11 +4,25 @@ Data models for podcast episodes and podcasts.
 
 from __future__ import annotations
 
-import json
 from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Protocol
 
 from .utils import parse_duration_to_seconds
+
+
+class Storable(Protocol):
+    """Protocol for entities that can be stored with GUID-based operations."""
+
+    guid: str
+
+    def to_json(self) -> Dict[str, Any]:
+        """Convert entity to JSON-serializable dictionary."""
+        ...  # pylint: disable=unnecessary-ellipsis
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Storable":
+        """Create entity from dictionary."""
+        ...  # pylint: disable=unnecessary-ellipsis
 
 
 @dataclass
@@ -17,7 +31,7 @@ class Episode:  # pylint: disable=too-many-instance-attributes
 
     Pure data class without file system dependencies.
     File paths are handled by the repository layer.
-    
+
     The 'id' field contains the current supercast_episode_id for backward
     compatibility. The 'guid' field will contain the RSS standard GUID.
     During transition, 'guid' may be None for existing episodes.
@@ -32,6 +46,7 @@ class Episode:  # pylint: disable=too-many-instance-attributes
     audio_link: str
     image: str
     guid: str = ""  # RSS standard GUID field
+    podcast_guid: str = ""  # Reference to parent podcast GUID
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Episode":
@@ -49,9 +64,11 @@ class Episode:  # pylint: disable=too-many-instance-attributes
 
         return cls(**data)
 
-    def to_json(self) -> str:
-        """Convert episode to JSON string."""
-        return json.dumps(asdict(self))
+    def to_json(self) -> Dict[str, Any]:
+        """Convert episode to JSON-serializable dictionary."""
+        return asdict(self)
+
+
 @dataclass
 class Podcast:
     """Represents a podcast, containing its metadata and episodes.
@@ -78,6 +95,6 @@ class Podcast:
 
         return cls(episodes=episodes, **data)
 
-    def to_json(self) -> str:
-        """Convert podcast to JSON string."""
-        return json.dumps(asdict(self))
+    def to_json(self) -> Dict[str, Any]:
+        """Convert podcast to JSON-serializable dictionary."""
+        return asdict(self)

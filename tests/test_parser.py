@@ -173,7 +173,9 @@ class TestPodcastParserFunctions(PodcastTestBase):
             self.assertEqual(episode.id, "ep123")
             self.assertEqual(episode.title, "The Best Episode")
             # audio_filename is no longer a computed property
-            self.assertEqual(episode.audio_link, "http://example.com/ep123.mp3?key=val")
+            self.assertEqual(
+                episode.audio_link, "http://example.com/ep123.mp3?key=val"
+            )
             self.assertEqual(episode.size, 12345)
             # Verify duration was correctly parsed: 1h 23m 45s = 5025 seconds
             self.assertEqual(episode.duration_seconds, 5025)
@@ -266,7 +268,9 @@ class TestPodcastParserFunctions(PodcastTestBase):
         if result:
             # Verify episode ID is correct - filename logic is in repository
             self.assertEqual(result.id, "123")
-            self.assertTrue(result.audio_link.startswith("http://test.com/audio"))
+            self.assertTrue(
+                result.audio_link.startswith("http://test.com/audio")
+            )
 
     def test_parse_entry_with_empty_fields(self) -> None:
         """Test parsing entry with missing optional fields."""

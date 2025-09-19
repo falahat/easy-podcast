@@ -6,7 +6,7 @@ import os
 from typing import Any, Dict, List
 from unittest.mock import Mock, patch
 
-from easy_podcast.manager import PodcastManager
+from easy_podcast.factory import create_manager_from_rss
 from easy_podcast.models import Podcast  # Keep for remaining instances
 
 from tests.base import PodcastTestBase
@@ -26,7 +26,7 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
 
         # Use test_dir as base, not Test_Podcast subdir
         test_podcast_dir = self.test_dir
-        manager = PodcastManager(test_podcast, test_podcast_dir)
+        manager = self.create_manager(test_podcast, test_podcast_dir)
         new_episodes = manager.get_new_episodes()
         self.assertEqual(len(new_episodes), 0)
 
@@ -44,7 +44,7 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         )
 
         test_podcast_dir = self.test_dir
-        manager = PodcastManager(test_podcast, test_podcast_dir)
+        manager = self.create_manager(test_podcast, test_podcast_dir)
 
         expected_path = manager.get_episode_audio_path(episode)
         actual_path = manager.get_episode_audio_path(episode)
@@ -65,7 +65,7 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         )
 
         test_podcast_dir = self.test_dir
-        manager = PodcastManager(test_podcast, test_podcast_dir)
+        manager = self.create_manager(test_podcast, test_podcast_dir)
 
         # File doesn't exist initially
         self.assertFalse(manager.episode_audio_exists(episode))
@@ -93,7 +93,7 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         )
 
         test_podcast_dir = self.test_dir
-        manager = PodcastManager(test_podcast, test_podcast_dir)
+        manager = self.create_manager(test_podcast, test_podcast_dir)
 
         expected_path = manager.get_episode_transcript_path(episode)
         actual_path = manager.get_episode_transcript_path(episode)
@@ -117,7 +117,7 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         )
 
         test_podcast_dir = self.test_dir
-        manager = PodcastManager(test_podcast, test_podcast_dir)
+        manager = self.create_manager(test_podcast, test_podcast_dir)
 
         # File doesn't exist initially
         self.assertFalse(manager.episode_transcript_exists(episode))
@@ -131,8 +131,8 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         # File should exist now
         self.assertTrue(manager.episode_transcript_exists(episode))
 
-    @patch("easy_podcast.parser.PodcastParser.from_content")
-    @patch("easy_podcast.downloader.download_rss_from_url")
+    @patch("easy_podcast.factory.PodcastParser.from_content")
+    @patch("easy_podcast.factory.download_rss_from_url")
     def test_duplicate_episode_handling(  # pylint: disable=too-many-locals
         self,
         mock_download_rss: Mock,
@@ -189,9 +189,7 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         mock_parse_content.return_value = mock_podcast
 
         # Ingest and download - base_data_dir is set by PodcastTestBase
-        manager = PodcastManager.from_rss_url(
-            "http://test.com/rss", self.test_dir
-        )
+        manager = create_manager_from_rss("http://test.com/rss", self.test_dir)
         self.assertIsNotNone(manager)
         if not manager:
             return
@@ -250,7 +248,7 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
 
         # Re-create manager to simulate a new run
         # The base_data_dir is still set by PodcastTestBase
-        manager_new = PodcastManager.from_rss_url(
+        manager_new = create_manager_from_rss(
             "http://test.com/rss", self.test_dir
         )
         self.assertIsNotNone(manager_new)
@@ -282,7 +280,7 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
             with open(episode_path, "w", encoding="utf-8") as f:
                 f.write("dummy content")
             manager.podcast.episodes.append(episode)
-            manager.file_manager.save_episodes(
+            manager.repository.save_episodes(
                 manager.podcast.title, manager.podcast.episodes
             )
 
@@ -342,7 +340,7 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         # Re-ingest: Create a new manager from the updated RSS feed
         # Since it's the same RSS URL, it will use the same data directory
         # and episode tracker
-        manager_updated = PodcastManager.from_rss_url(
+        manager_updated = create_manager_from_rss(
             "http://test.com/rss", self.test_dir
         )
         self.assertIsNotNone(manager_updated)

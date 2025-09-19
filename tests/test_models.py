@@ -2,8 +2,8 @@
 Tests for data models (Episode and Podcast classes).
 """
 
-import json
 import unittest
+from typing import Any, Dict
 
 from easy_podcast.models import Episode, Podcast
 
@@ -44,13 +44,12 @@ class TestEpisode(unittest.TestCase):
             image="http://test.com/image.jpg",
         )
 
-        json_str = episode.to_json()
-        parsed = json.loads(json_str)
+        data_dict = episode.to_json()
 
-        self.assertEqual(parsed["id"], "123")
-        self.assertEqual(parsed["title"], "Test Episode")
-        self.assertEqual(parsed["size"], 1000)
-        self.assertEqual(parsed["author"], "Test Author")
+        self.assertEqual(data_dict["id"], "123")
+        self.assertEqual(data_dict["title"], "Test Episode")
+        self.assertEqual(data_dict["size"], 1000)
+        self.assertEqual(data_dict["author"], "Test Author")
 
 
 class TestPodcast(unittest.TestCase):
@@ -89,7 +88,7 @@ class TestPodcast(unittest.TestCase):
 
     def test_episode_from_dict_with_old_format(self) -> None:
         """Test Episode.from_dict handles conversion from old format."""
-        old_format_data = {
+        old_format_data: Dict[str, Any] = {
             "id": "123",
             "published": "2023-01-01",
             "title": "Test Episode",
@@ -108,7 +107,7 @@ class TestPodcast(unittest.TestCase):
 
     def test_episode_from_dict_with_new_format(self) -> None:
         """Test Episode.from_dict works with new duration_seconds format."""
-        new_format_data = {
+        new_format_data: Dict[str, Any] = {
             "id": "456",
             "published": "2023-01-01",
             "title": "Test Episode",
@@ -134,14 +133,13 @@ class TestPodcast(unittest.TestCase):
         )
 
         # Test to_json
-        json_str = podcast.to_json()
-        self.assertIsInstance(json_str, str)
-        self.assertIn("Test Podcast", json_str)
-        self.assertIn("test-podcast-guid", json_str)
+        data_dict = podcast.to_json()
+        self.assertIsInstance(data_dict, dict)
+        self.assertEqual(data_dict["title"], "Test Podcast")
+        self.assertEqual(data_dict["guid"], "test-podcast-guid")
 
         # Test from_dict
-        podcast_dict = json.loads(json_str)
-        restored_podcast = Podcast.from_dict(podcast_dict)
+        restored_podcast = Podcast.from_dict(data_dict)
 
         self.assertEqual(restored_podcast.title, "Test Podcast")
         self.assertEqual(restored_podcast.rss_url, "http://test.com/rss")
@@ -166,7 +164,7 @@ class TestPodcast(unittest.TestCase):
         )
 
         # Test serialization round-trip
-        podcast_dict = json.loads(podcast.to_json())
+        podcast_dict = podcast.to_json()
         restored_podcast = Podcast.from_dict(podcast_dict)
 
         self.assertEqual(len(restored_podcast.episodes), 1)

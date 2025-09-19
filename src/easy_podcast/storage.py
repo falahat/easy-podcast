@@ -28,7 +28,7 @@ class Storage:
         """Read JSON file, return None if file doesn't exist or invalid JSON."""
         if not os.path.exists(path):
             return None
-        
+
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -43,7 +43,7 @@ class Storage:
             directory = os.path.dirname(path)
             if directory:
                 self.ensure_directory(directory)
-            
+
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
             return True
@@ -65,7 +65,7 @@ class Storage:
             directory = os.path.dirname(path)
             if directory:
                 self.ensure_directory(directory)
-            
+
             with open(path, "wb") as f:
                 f.write(data)
             return True
@@ -79,10 +79,14 @@ class Storage:
             directory = os.path.dirname(path)
             if directory:
                 self.ensure_directory(directory)
-            
+
             with open(path, "w", encoding="utf-8") as f:
                 for line in lines:
-                    f.write(line + "\n")
+                    # Handle dict format for backward compatibility
+                    if isinstance(line, dict):
+                        f.write(json.dumps(line) + "\n")
+                    else:
+                        f.write(str(line) + "\n")
             return True
         except IOError:
             return False
@@ -91,7 +95,7 @@ class Storage:
         """Read lines from text file, return None if error."""
         if not os.path.exists(path):
             return None
-        
+
         try:
             with open(path, "r", encoding="utf-8") as f:
                 return [line.strip() for line in f.readlines()]
@@ -102,10 +106,13 @@ class Storage:
         """List subdirectories in given path."""
         if not os.path.exists(path):
             return []
-        
+
         try:
-            return [item for item in os.listdir(path)
-                    if os.path.isdir(os.path.join(path, item))]
+            return [
+                item
+                for item in os.listdir(path)
+                if os.path.isdir(os.path.join(path, item))
+            ]
         except OSError:
             return []
 

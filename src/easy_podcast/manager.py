@@ -3,7 +3,7 @@ Main orchestration class for podcast management.
 """
 
 import logging
-from typing import List, Set
+from typing import List
 
 from .episode_downloader import DownloadSummary, EpisodeDownloader
 from .models import Episode, Podcast
@@ -52,7 +52,9 @@ class PodcastManager:
 
     def episode_audio_exists(self, episode: Episode) -> bool:
         """Check if an episode's audio file exists."""
-        return self.repository.episode_audio_exists(self.podcast.title, episode)
+        return self.repository.episode_audio_exists(
+            self.podcast.title, episode
+        )
 
     def episode_transcript_exists(self, episode: Episode) -> bool:
         """Check if an episode's transcript file exists."""
@@ -62,7 +64,9 @@ class PodcastManager:
 
     def get_episode_audio_path(self, episode: Episode) -> str:
         """Get the full path to an episode's audio file."""
-        return self.repository.get_episode_audio_path(self.podcast.title, episode)
+        return self.repository.get_episode_audio_path(
+            self.podcast.title, episode
+        )
 
     def get_episode_transcript_path(self, episode: Episode) -> str:
         """Get the full path to an episode's transcript file."""
@@ -72,10 +76,9 @@ class PodcastManager:
 
     def get_new_episodes(self) -> List[Episode]:
         """Get episodes that haven't been downloaded yet."""
-        existing_ids = self._get_existing_episode_ids()
-        new_episodes = [
-            ep for ep in self.podcast.episodes if ep.id not in existing_ids
-        ]
+        new_episodes = self.repository.filter_new_episodes(
+            self.podcast.title, self.podcast.episodes
+        )
 
         self.logger.info(
             "Found %d new episodes out of %d total episodes",
@@ -87,35 +90,58 @@ class PodcastManager:
 
     def download_episodes(self, episodes: List[Episode]) -> DownloadSummary:
         """Download multiple episodes with progress tracking."""
-        downloads = []
+        downloads = self._prepare_downloads(episodes)
+        summary = self.downloader.download_multiple(downloads)
+
+        if summary.successful > 0:
+            # Use upsert to automatically handle episode tracking
+            successfully_downloaded = (
+                self._get_successfully_downloaded_episodes(downloads, summary)
+            )
+            self.repository.upsert_episodes(
+                self.podcast.title, successfully_downloaded
+            )
+
+        self._log_download_results(summary)
+        return summary
+
+    def _get_successfully_downloaded_episodes(
+        self,
+        downloads: List[tuple[Episode, str]],
+        summary: DownloadSummary,
+    ) -> List[Episode]:
+        """Get episodes that were successfully downloaded."""
+        path_to_episode = {path: episode for episode, path in downloads}
+
+        successfully_downloaded: List[Episode] = []
+        for result in summary.results:
+            if result.success and result.file_path and not result.was_cached:
+                episode = path_to_episode.get(result.file_path)
+                if episode:
+                    successfully_downloaded.append(episode)
+
+        return successfully_downloaded
+
+    def _prepare_downloads(
+        self, episodes: List[Episode]
+    ) -> List[tuple[Episode, str]]:
+        """Prepare list of episodes and their target paths for download."""
+        downloads: List[tuple[Episode, str]] = []
         for episode in episodes:
             target_path = self.repository.get_episode_audio_path(
                 self.podcast.title, episode
             )
             downloads.append((episode, target_path))
+        return downloads
 
-        summary = self.downloader.download_multiple(downloads)
-
+    def _log_download_results(self, summary: DownloadSummary) -> None:
+        """Log the download results summary."""
         self.logger.info(
             "Download results: %d successful, %d skipped, %d failed",
             summary.successful,
             summary.skipped,
             summary.failed,
         )
-
-        return summary
-
-    def _get_existing_episode_ids(self) -> Set[str]:
-        """Get set of episode IDs that have been downloaded."""
-        episodes = self.repository.load_episodes(self.podcast.title)
-        downloaded_ids = set()
-
-        for episode in episodes:
-            # Check if the audio file actually exists
-            if self.episode_audio_exists(episode):
-                downloaded_ids.add(episode.id)
-
-        return downloaded_ids
 
     def _get_episodes_with_audio(self) -> List[Episode]:
         """Get episodes that have existing audio files."""

@@ -9,7 +9,7 @@ import unittest
 from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
-from easy_podcast.manager import PodcastManager
+from easy_podcast.factory import create_manager_from_rss
 from easy_podcast.models import Episode, Podcast
 from easy_podcast.utils import format_bytes
 
@@ -56,10 +56,8 @@ class TestIntegration(PodcastTestBase):
         mock_get.side_effect = mock_get_side_effect
 
         # Run the complete workflow
-        # Use the static factory method to create manager from RSS
-        manager = PodcastManager.from_rss_url(
-            "http://test.com/rss", self.test_dir
-        )
+        # Use the factory function to create manager from RSS
+        manager = create_manager_from_rss("http://test.com/rss", self.test_dir)
         self.assertIsNotNone(manager)
         assert manager is not None  # Help mypy understand this
 
@@ -73,11 +71,17 @@ class TestIntegration(PodcastTestBase):
         self.assertEqual(new_episodes[0].id, "ep1")
 
         # Download episodes
-        file_path, was_downloaded = manager.download_episode(new_episodes[0])
-        self.assertIsNotNone(file_path)
-        assert file_path is not None  # Help mypy understand this
-        self.assertTrue(was_downloaded)
-        self.assertTrue(os.path.exists(file_path))
+        summary = manager.download_episodes([new_episodes[0]])
+        self.assertEqual(summary.successful, 1)
+        self.assertEqual(summary.failed, 0)
+        self.assertEqual(len(summary.results), 1)
+
+        # Check the first result
+        result = summary.results[0]
+        self.assertTrue(result.success)
+        self.assertIsNotNone(result.file_path)
+        if result.file_path:
+            self.assertTrue(os.path.exists(result.file_path))
 
         # 4. Verify no new episodes after download
         new_episodes_after = manager.get_new_episodes()
@@ -100,7 +104,7 @@ class TestIntegration(PodcastTestBase):
         self.assertEqual(podcast.title, "Test")
 
         # Test manager creation with required parameters
-        manager = PodcastManager(podcast, self.test_dir)
+        manager = self.create_manager(podcast, self.test_dir)
         self.assertIsNotNone(manager)
 
         result = format_bytes(1024)
@@ -114,7 +118,7 @@ class TestIntegration(PodcastTestBase):
             test_podcast = Podcast(
                 title="Test", rss_url="http://test.com", safe_title="Test"
             )
-            manager = PodcastManager(test_podcast, self.test_dir)
+            manager = self.create_manager(test_podcast, self.test_dir)
             self.assertIsNotNone(manager)
             # Use imports to satisfy type checker
             self.assertIsNotNone(Episode)
