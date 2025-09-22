@@ -6,7 +6,7 @@ This module provides low-level file operations without any business logic.
 
 import json
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Optional, cast
 
 
 class Storage:
@@ -24,19 +24,21 @@ class Storage:
         """Check if file exists."""
         return os.path.exists(path)
 
-    def read_json(self, path: str) -> Optional[Dict[str, Any]]:
-        """Read JSON file, return None if file doesn't exist or invalid JSON."""
+    def read_json(self, path: str) -> Optional[dict[str, Any]]:
+        """Read JSON file, return None if file doesn't exist or is invalid."""
         if not os.path.exists(path):
             return None
 
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                return data if isinstance(data, dict) else None
+                if isinstance(data, dict):
+                    return cast(dict[str, Any], data)
+                return None
         except (json.JSONDecodeError, FileNotFoundError, IOError):
             return None
 
-    def write_json(self, path: str, data: Dict[str, Any]) -> bool:
+    def write_json(self, path: str, data: dict[str, Any]) -> bool:
         """Write data to JSON file, return success status."""
         try:
             # Ensure directory exists
@@ -72,7 +74,7 @@ class Storage:
         except IOError:
             return False
 
-    def write_text_lines(self, path: str, lines: list) -> bool:
+    def write_text_lines(self, path: str, lines: list[dict[str, Any]]) -> bool:
         """Write lines to text file (for JSONL), return success status."""
         try:
             # Ensure directory exists
@@ -82,16 +84,12 @@ class Storage:
 
             with open(path, "w", encoding="utf-8") as f:
                 for line in lines:
-                    # Handle dict format for backward compatibility
-                    if isinstance(line, dict):
-                        f.write(json.dumps(line) + "\n")
-                    else:
-                        f.write(str(line) + "\n")
+                    f.write(json.dumps(line) + "\n")
             return True
         except IOError:
             return False
 
-    def read_text_lines(self, path: str) -> Optional[list]:
+    def read_text_lines(self, path: str) -> Optional[list[str]]:
         """Read lines from text file, return None if error."""
         if not os.path.exists(path):
             return None
@@ -102,7 +100,7 @@ class Storage:
         except (FileNotFoundError, IOError):
             return None
 
-    def list_directories(self, path: str) -> list:
+    def list_directories(self, path: str) -> list[str]:
         """List subdirectories in given path."""
         if not os.path.exists(path):
             return []

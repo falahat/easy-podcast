@@ -8,7 +8,14 @@ import json
 from dataclasses import asdict
 from typing import List, Optional, TypeVar, Generic, Set, Type
 
-from .models import Episode, Podcast, Storable
+from .models import (
+    Episode,
+    Podcast,
+    Storable,
+    FileSpec,
+    EpisodeFile,
+    PodcastFiles,
+)
 from .storage import Storage
 from .utils import sanitize_filename
 
@@ -109,19 +116,18 @@ class PodcastRepository:
         sanitized_title = sanitize_filename(podcast_title)
         return self.storage.join_path(self.storage.base_dir, sanitized_title)
 
-    def get_episode_audio_path(
-        self, podcast_title: str, episode: Episode
+    def get_episode_file_path(
+        self, podcast_title: str, episode: Episode, file_spec: FileSpec
     ) -> str:
-        """Get full path to episode audio file."""
+        """Get full path to an episode file of the specified type."""
         podcast_dir = self.get_podcast_dir(podcast_title)
-        return self.storage.join_path(podcast_dir, f"{episode.id}.mp3")
 
-    def get_episode_transcript_path(
-        self, podcast_title: str, episode: Episode
-    ) -> str:
-        """Get full path to episode transcript file."""
-        podcast_dir = self.get_podcast_dir(podcast_title)
-        filename = f"{episode.id}_transcript.json"
+        if hasattr(file_spec, "suffix"):  # EpisodeFile enum
+            suffix = file_spec.suffix
+        else:  # CustomFile
+            suffix = file_spec.suffix
+
+        filename = f"{episode.id}{suffix}"
         return self.storage.join_path(podcast_dir, filename)
 
     def ensure_podcast_dir_exists(self, podcast_title: str) -> str:
@@ -185,7 +191,9 @@ class PodcastRepository:
         return [
             episode
             for episode in episodes
-            if not self.episode_audio_exists(podcast_title, episode)
+            if not self.episode_file_exists(
+                podcast_title, episode, EpisodeFile.AUDIO
+            )
         ]
 
     def save_rss_cache(self, podcast_title: str, rss_content: bytes) -> bool:
@@ -208,33 +216,26 @@ class PodcastRepository:
         podcast_dir = self.get_podcast_dir(podcast_title)
         return self.storage.file_exists(podcast_dir)
 
-    def episode_audio_exists(
-        self, podcast_title: str, episode: Episode
+    def episode_file_exists(
+        self, podcast_title: str, episode: Episode, file_spec: FileSpec
     ) -> bool:
-        """Check if episode audio file exists."""
-        audio_path = self.get_episode_audio_path(podcast_title, episode)
-        return self.storage.file_exists(audio_path)
-
-    def episode_transcript_exists(
-        self, podcast_title: str, episode: Episode
-    ) -> bool:
-        """Check if episode transcript file exists."""
-        transcript_path = self.get_episode_transcript_path(
-            podcast_title, episode
+        """Check if an episode file of the specified type exists."""
+        file_path = self.get_episode_file_path(
+            podcast_title, episode, file_spec
         )
-        return self.storage.file_exists(transcript_path)
+        return self.storage.file_exists(file_path)
 
     def _get_podcast_metadata_path(self, podcast_title: str) -> str:
         """Get path to podcast metadata file."""
         podcast_dir = self.get_podcast_dir(podcast_title)
-        return self.storage.join_path(podcast_dir, "podcast.json")
+        return self.storage.join_path(podcast_dir, PodcastFiles.METADATA)
 
     def _get_episodes_file_path(self, podcast_title: str) -> str:
         """Get path to episodes.jsonl file for a podcast."""
         podcast_dir = self.get_podcast_dir(podcast_title)
-        return self.storage.join_path(podcast_dir, "episodes.jsonl")
+        return self.storage.join_path(podcast_dir, PodcastFiles.EPISODES)
 
     def _get_rss_cache_path(self, podcast_title: str) -> str:
         """Get path to RSS cache file."""
         podcast_dir = self.get_podcast_dir(podcast_title)
-        return self.storage.join_path(podcast_dir, "rss.xml")
+        return self.storage.join_path(podcast_dir, PodcastFiles.RSS_CACHE)

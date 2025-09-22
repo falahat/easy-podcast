@@ -23,7 +23,7 @@ def _create_dependencies(
     """Create shared dependencies for PodcastManager."""
     storage = Storage(data_dir)
     repository = PodcastRepository(storage)
-    downloader = EpisodeDownloader(storage)
+    downloader = EpisodeDownloader(storage, repository)
     return storage, repository, downloader
 
 

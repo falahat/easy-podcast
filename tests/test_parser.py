@@ -67,7 +67,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
 
     def test_parse_basic_podcast(self) -> None:
         """Test parsing a basic RSS feed into a Podcast object."""
-        entries_data = [
+        entries_data: list[dict[str, Any]] = [
             {
                 "supercast_episode_id": "1",
                 "title": "Episode 1",
@@ -78,7 +78,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
         mock_feed = self._create_mock_feed("My Test Podcast", entries_data)
 
         # pylint: disable=protected-access
-        podcast = self.parser._create_podcast_from_feed(
+        podcast = self.parser.create_podcast_from_feed(
             "http://example.com/rss", mock_feed
         )
 
@@ -92,7 +92,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
         mock_feed = self._create_mock_feed("Podcast/With\\Slashes", [])
 
         # pylint: disable=protected-access
-        podcast = self.parser._create_podcast_from_feed(
+        podcast = self.parser.create_podcast_from_feed(
             "http://example.com/rss", mock_feed
         )
 
@@ -135,7 +135,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
         mock_feed = self._create_mock_feed("Mixed Test Podcast", entries_data)
 
         # pylint: disable=protected-access
-        podcast = self.parser._create_podcast_from_feed(
+        podcast = self.parser.create_podcast_from_feed(
             "http://example.com/rss", mock_feed
         )
 
@@ -149,7 +149,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
 
     def test_parse_entry_to_episode(self) -> None:
         """Test the internal method for parsing a single entry."""
-        entry_data = {
+        entry_data: dict[str, Any] = {
             "supercast_episode_id": "ep123",
             "published": "Tue, 01 Jan 2020 12:00:00 +0000",
             "title": "The Best Episode",
@@ -166,7 +166,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
         }
 
         # pylint: disable=protected-access
-        episode = self.parser._parse_entry_to_episode(entry_data)
+        episode = self.parser.parse_entry_to_episode(entry_data)
 
         self.assertIsNotNone(episode)
         if episode:
@@ -184,14 +184,14 @@ class TestPodcastParserFunctions(PodcastTestBase):
         """Test that entries without a supercast ID are skipped."""
         entry_data = {"title": "No ID Episode"}
         # pylint: disable=protected-access
-        episode = self.parser._parse_entry_to_episode(entry_data)
+        episode = self.parser.parse_entry_to_episode(entry_data)
         self.assertIsNone(episode)
 
     def test_parse_entry_missing_audio(self) -> None:
         """Test that entries without an audio enclosure are skipped."""
         entry_data = {"supercast_episode_id": "no-audio-123"}
         # pylint: disable=protected-access
-        episode = self.parser._parse_entry_to_episode(entry_data)
+        episode = self.parser.parse_entry_to_episode(entry_data)
         self.assertIsNone(episode)
 
     def test_parse_entry_missing_episode_id(self) -> None:
@@ -203,7 +203,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
             ],
         }
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
         self.assertIsNone(result)
 
     def test_parse_entry_missing_audio_enclosure(self) -> None:
@@ -216,7 +216,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
             ],
         }
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
         self.assertIsNone(result)
 
     def test_parse_entry_with_different_audio_formats(self) -> None:
@@ -240,7 +240,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
                 ],
             }
             # pylint: disable=protected-access
-            result = self.parser._parse_entry_to_episode(entry)
+            result = self.parser.parse_entry_to_episode(entry)
             self.assertIsNotNone(result)
             if result:
                 # Audio filename logic moved to repository layer
@@ -263,7 +263,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
             ],
         }
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
         self.assertIsNotNone(result)
         if result:
             # Verify episode ID is correct - filename logic is in repository
@@ -287,7 +287,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
         }
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
         self.assertIsNotNone(result)
         if result:
             self.assertEqual(result.id, "123")
@@ -316,7 +316,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
         }
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
         self.assertIsNotNone(result)
         if result:
             self.assertEqual(result.audio_link, "http://test.com/audio1.mp3")
@@ -329,7 +329,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
         feed["entries"] = []
 
         # pylint: disable=protected-access
-        podcast = self.parser._create_podcast_from_feed(
+        podcast = self.parser.create_podcast_from_feed(
             "http://example.com/rss", feed
         )
         self.assertEqual(podcast.title, "Unknown Podcast")
@@ -341,7 +341,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
         # No entries attribute at all
 
         # pylint: disable=protected-access
-        podcast = self.parser._create_podcast_from_feed(
+        podcast = self.parser.create_podcast_from_feed(
             "http://example.com/rss", feed
         )
         self.assertEqual(podcast.title, "Test Podcast")
@@ -430,7 +430,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
         }
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
         self.assertIsNotNone(result)
         if result:
             # 30:45 = 30*60 + 45 = 1845 seconds
@@ -451,7 +451,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
         }
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
         self.assertIsNotNone(result)
         if result:
             # 2:15:30 = 2*3600 + 15*60 + 30 = 8130 seconds
@@ -472,7 +472,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
         }
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
         self.assertIsNotNone(result)
         if result:
             # Invalid duration should return -1
@@ -493,7 +493,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
         }
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
         self.assertIsNotNone(result)
         if result:
             # Empty duration should return -1
@@ -514,7 +514,7 @@ class TestPodcastParserFunctions(PodcastTestBase):
         }
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
         self.assertIsNotNone(result)
         if result:
             # Missing duration should return -1

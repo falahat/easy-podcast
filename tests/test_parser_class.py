@@ -135,7 +135,7 @@ class TestPodcastParser(PodcastTestBase):
         mock_parse.return_value = mock_feed_data
 
         with patch.object(
-            self.parser, "_create_podcast_from_feed"
+            self.parser, "create_podcast_from_feed"
         ) as mock_create:
             mock_podcast = Mock(spec=Podcast)
             mock_podcast.title = "Test Podcast"
@@ -197,12 +197,12 @@ class TestPodcastParser(PodcastTestBase):
     def test_from_content_create_podcast_returns_none(
         self, mock_parse: Mock
     ) -> None:
-        """Test handling when _create_podcast_from_feed returns None."""
+        """Test handling when create_podcast_from_feed returns None."""
         mock_feed_data = self._create_mock_feed_data("Test Podcast")
         mock_parse.return_value = mock_feed_data
 
         with patch.object(
-            self.parser, "_create_podcast_from_feed"
+            self.parser, "create_podcast_from_feed"
         ) as mock_create:
             mock_create.return_value = None
 
@@ -219,13 +219,13 @@ class TestPodcastParser(PodcastTestBase):
         mock_feed_data = self._create_mock_feed_data("My Podcast", entries)
 
         with patch.object(
-            self.parser, "_parse_entry_to_episode"
+            self.parser, "parse_entry_to_episode"
         ) as mock_parse_episode:
             mock_episode = Mock(spec=Episode)
             mock_parse_episode.return_value = mock_episode
 
             # pylint: disable=protected-access
-            result = self.parser._create_podcast_from_feed(
+            result = self.parser.create_podcast_from_feed(
                 "http://example.com/rss", mock_feed_data
             )
 
@@ -242,7 +242,7 @@ class TestPodcastParser(PodcastTestBase):
         mock_feed_data.feed = {}  # No title
 
         # pylint: disable=protected-access
-        result = self.parser._create_podcast_from_feed(
+        result = self.parser.create_podcast_from_feed(
             "http://example.com/rss", mock_feed_data
         )
         assert result is not None
@@ -254,7 +254,7 @@ class TestPodcastParser(PodcastTestBase):
         mock_feed_data = self._create_mock_feed_data("Empty Podcast", [])
 
         # pylint: disable=protected-access
-        result = self.parser._create_podcast_from_feed(
+        result = self.parser.create_podcast_from_feed(
             "http://example.com/rss", mock_feed_data
         )
         assert result is not None
@@ -270,14 +270,14 @@ class TestPodcastParser(PodcastTestBase):
         mock_feed_data = self._create_mock_feed_data("Test Podcast", entries)
 
         with patch.object(
-            self.parser, "_parse_entry_to_episode"
+            self.parser, "parse_entry_to_episode"
         ) as mock_parse_episode:
             # First episode valid, second invalid (returns None)
             mock_episode = Mock(spec=Episode)
             mock_parse_episode.side_effect = [mock_episode, None]
 
             # pylint: disable=protected-access
-            result = self.parser._create_podcast_from_feed(
+            result = self.parser.create_podcast_from_feed(
                 "http://example.com/rss", mock_feed_data
             )
             assert result is not None
@@ -296,7 +296,7 @@ class TestPodcastParser(PodcastTestBase):
         )
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
 
         self.assertIsNotNone(result)
         assert result is not None  # for type checker
@@ -313,7 +313,7 @@ class TestPodcastParser(PodcastTestBase):
         del entry["supercast_episode_id"]
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
 
         self.assertIsNone(result)
 
@@ -322,7 +322,7 @@ class TestPodcastParser(PodcastTestBase):
         entry = self._create_mock_entry(has_audio=False)
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
 
         self.assertIsNone(result)
 
@@ -331,7 +331,7 @@ class TestPodcastParser(PodcastTestBase):
         entry = self._create_mock_entry(audio_type="video/mp4")
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
 
         self.assertIsNone(result)
 
@@ -357,7 +357,7 @@ class TestPodcastParser(PodcastTestBase):
         ]
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
 
         self.assertIsNotNone(result)
         assert result is not None  # for type checker
@@ -374,7 +374,7 @@ class TestPodcastParser(PodcastTestBase):
         }
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
 
         self.assertIsNotNone(result)
         assert result is not None  # for type checker
@@ -391,7 +391,7 @@ class TestPodcastParser(PodcastTestBase):
         entry["image"] = {"href": "http://example.com/episode_image.jpg"}
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
 
         self.assertIsNotNone(result)
         assert result is not None  # for type checker
@@ -403,7 +403,7 @@ class TestPodcastParser(PodcastTestBase):
         entry["image"] = {}  # Missing href
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
 
         self.assertIsNotNone(result)
         assert result is not None  # for type checker
@@ -415,7 +415,7 @@ class TestPodcastParser(PodcastTestBase):
         entry["enclosures"][0]["length"] = "12345"
 
         # pylint: disable=protected-access
-        result = self.parser._parse_entry_to_episode(entry)
+        result = self.parser.parse_entry_to_episode(entry)
 
         self.assertIsNotNone(result)
         assert result is not None  # for type checker
@@ -429,7 +429,7 @@ class TestPodcastParser(PodcastTestBase):
         # This should raise ValueError when int() is called
         with self.assertRaises(ValueError):
             # pylint: disable=protected-access
-            self.parser._parse_entry_to_episode(entry)
+            self.parser.parse_entry_to_episode(entry)
 
 
 if __name__ == "__main__":

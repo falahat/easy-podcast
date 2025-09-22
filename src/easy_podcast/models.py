@@ -5,9 +5,49 @@ Data models for podcast episodes and podcasts.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List, Protocol
+from enum import Enum
+from typing import Any, Protocol, Union
 
 from .utils import parse_duration_to_seconds
+
+
+@dataclass(frozen=True)
+class CustomFile:
+    """Custom episode file specification for extensibility."""
+
+    name: str
+    suffix: str
+
+    def __post_init__(self) -> None:
+        if not self.name or not self.suffix:
+            raise ValueError("name and suffix are required")
+
+
+class EpisodeFile(Enum):
+    """Standard episode file types."""
+    AUDIO = "audio"
+    TRANSCRIPT = "transcript"
+
+    @property
+    def suffix(self) -> str:
+        """Get file suffix for this type."""
+        return {
+            EpisodeFile.AUDIO: ".mp3",
+            EpisodeFile.TRANSCRIPT: "_transcript.json",
+        }[self]
+
+
+# Type alias for flexible file specifications
+FileSpec = Union[EpisodeFile, CustomFile]
+
+
+# Constants for podcast-level files
+class PodcastFiles:
+    """Standard podcast directory file names."""
+
+    METADATA = "podcast.json"
+    EPISODES = "episodes.jsonl"
+    RSS_CACHE = "rss.xml"
 
 
 class Storable(Protocol):
@@ -15,12 +55,12 @@ class Storable(Protocol):
 
     guid: str
 
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> dict[str, Any]:
         """Convert entity to JSON-serializable dictionary."""
         ...  # pylint: disable=unnecessary-ellipsis
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Storable":
+    def from_dict(cls, data: dict[str, Any]) -> "Storable":
         """Create entity from dictionary."""
         ...  # pylint: disable=unnecessary-ellipsis
 
@@ -49,7 +89,7 @@ class Episode:  # pylint: disable=too-many-instance-attributes
     podcast_guid: str = ""  # Reference to parent podcast GUID
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Episode":
+    def from_dict(cls, data: dict[str, Any]) -> "Episode":
         """Create Episode from dictionary, handling old format conversion."""
 
         # Remove fields that are no longer used
@@ -64,7 +104,7 @@ class Episode:  # pylint: disable=too-many-instance-attributes
 
         return cls(**data)
 
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> dict[str, Any]:
         """Convert episode to JSON-serializable dictionary."""
         return asdict(self)
 
@@ -80,11 +120,11 @@ class Podcast:
     title: str
     rss_url: str
     safe_title: str  # Sanitized title used for folder names
-    episodes: List[Episode] = field(default_factory=list)
+    episodes: list["Episode"] = field(default_factory=list)
     guid: str = ""  # RSS standard GUID field
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Podcast":
+    def from_dict(cls, data: dict[str, Any]) -> "Podcast":
         """Create Podcast from dictionary."""
         # Make a copy to avoid modifying the original
         data = data.copy()
@@ -95,6 +135,6 @@ class Podcast:
 
         return cls(episodes=episodes, **data)
 
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> dict[str, Any]:
         """Convert podcast to JSON-serializable dictionary."""
         return asdict(self)

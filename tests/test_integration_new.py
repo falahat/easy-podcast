@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from easy_podcast.factory import create_manager_from_rss
+from easy_podcast.models import EpisodeFile
 
 
 class TestNewArchitectureIntegration(unittest.TestCase):
@@ -26,7 +27,7 @@ class TestNewArchitectureIntegration(unittest.TestCase):
                 <item>
                     <title>Test Episode</title>
                     <supercast_episode_id>test123</supercast_episode_id>
-                    <enclosure url="http://test.com/test.mp3" 
+                    <enclosure url="http://test.com/test.mp3"
                                type="audio/mpeg" length="1000"/>
                 </item>
             </channel>
@@ -61,9 +62,9 @@ class TestNewArchitectureIntegration(unittest.TestCase):
                 self.assertIsNotNone(manager.repository)
                 self.assertIsNotNone(manager.downloader)
 
-                # Test that the repository works
-                audio_path = manager.repository.get_episode_audio_path(
-                    manager.podcast.title, episode
+                # Test that the manager works correctly
+                audio_path = manager.get_episode_file_path(
+                    episode, EpisodeFile.AUDIO
                 )
                 self.assertTrue(audio_path.endswith("test123.mp3"))
 

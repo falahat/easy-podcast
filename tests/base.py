@@ -8,8 +8,12 @@ import tempfile
 import unittest
 from typing import Any, Dict, List, Optional
 from unittest.mock import Mock
+
+from easy_podcast.episode_downloader import EpisodeDownloader
 from easy_podcast.manager import PodcastManager
 from easy_podcast.models import Podcast
+from easy_podcast.repository import PodcastRepository
+from easy_podcast.storage import Storage
 
 
 class PodcastTestBase(unittest.TestCase):
@@ -139,18 +143,13 @@ class PodcastTestBase(unittest.TestCase):
         Returns:
             Configured PodcastManager instance
         """
-        from easy_podcast.episode_downloader import EpisodeDownloader
-        from easy_podcast.manager import PodcastManager
-        from easy_podcast.repository import PodcastRepository
-        from easy_podcast.storage import Storage
-
         if data_dir is None:
             data_dir = self.test_dir
 
         # Create dependencies
         storage = Storage(data_dir)
         repository = PodcastRepository(storage)
-        downloader = EpisodeDownloader(storage)
+        downloader = EpisodeDownloader(storage, repository)
 
         # Create and return manager
         return PodcastManager(podcast, repository, downloader)

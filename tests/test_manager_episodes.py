@@ -46,8 +46,12 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         test_podcast_dir = self.test_dir
         manager = self.create_manager(test_podcast, test_podcast_dir)
 
-        expected_path = manager.get_episode_audio_path(episode)
-        actual_path = manager.get_episode_audio_path(episode)
+        from easy_podcast.models import EpisodeFile
+        expected_path = manager.get_episode_file_path(
+            episode, EpisodeFile.AUDIO
+        )
+        # Check they match
+        actual_path = manager.get_episode_file_path(episode, EpisodeFile.AUDIO)
 
         self.assertEqual(actual_path, expected_path)
 
@@ -68,16 +72,23 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         manager = self.create_manager(test_podcast, test_podcast_dir)
 
         # File doesn't exist initially
-        self.assertFalse(manager.episode_audio_exists(episode))
+        from easy_podcast.models import EpisodeFile
+        self.assertFalse(
+            manager.episode_file_exists(episode, EpisodeFile.AUDIO)
+        )
 
         # Create the file
-        episode_path = manager.get_episode_audio_path(episode)
+        episode_path = manager.get_episode_file_path(
+            episode, EpisodeFile.AUDIO
+        )
         os.makedirs(os.path.dirname(episode_path), exist_ok=True)
         with open(episode_path, "w", encoding="utf-8") as f:
             f.write("test content")
 
         # File should exist now
-        self.assertTrue(manager.episode_audio_exists(episode))
+        self.assertTrue(
+            manager.episode_file_exists(episode, EpisodeFile.AUDIO)
+        )
 
     def test_get_episode_transcript_path(self) -> None:
         """Test get_episode_transcript_path method."""
@@ -95,8 +106,13 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         test_podcast_dir = self.test_dir
         manager = self.create_manager(test_podcast, test_podcast_dir)
 
-        expected_path = manager.get_episode_transcript_path(episode)
-        actual_path = manager.get_episode_transcript_path(episode)
+        from easy_podcast.models import EpisodeFile
+        expected_path = manager.get_episode_file_path(
+            episode, EpisodeFile.TRANSCRIPT
+        )
+        actual_path = manager.get_episode_file_path(
+            episode, EpisodeFile.TRANSCRIPT
+        )
 
         self.assertEqual(actual_path, expected_path)
 
@@ -120,16 +136,23 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         manager = self.create_manager(test_podcast, test_podcast_dir)
 
         # File doesn't exist initially
-        self.assertFalse(manager.episode_transcript_exists(episode))
+        from easy_podcast.models import EpisodeFile
+        self.assertFalse(
+            manager.episode_file_exists(episode, EpisodeFile.TRANSCRIPT)
+        )
 
         # Create the file
-        transcript_path = manager.get_episode_transcript_path(episode)
+        transcript_path = manager.get_episode_file_path(
+            episode, EpisodeFile.TRANSCRIPT
+        )
         os.makedirs(os.path.dirname(transcript_path), exist_ok=True)
         with open(transcript_path, "w", encoding="utf-8") as f:
             f.write('{"test": "transcript content"}')
 
         # File should exist now
-        self.assertTrue(manager.episode_transcript_exists(episode))
+        self.assertTrue(
+            manager.episode_file_exists(episode, EpisodeFile.TRANSCRIPT)
+        )
 
     @patch("easy_podcast.factory.PodcastParser.from_content")
     @patch("easy_podcast.factory.download_rss_from_url")
@@ -198,9 +221,10 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         self.assertEqual(len(new_episodes), 2)
 
         # Simulate successful download by creating files in new structure
+        from easy_podcast.models import EpisodeFile
         for ep in new_episodes:
             # Create dummy audio files to simulate download
-            episode_path = manager.get_episode_audio_path(ep)
+            episode_path = manager.get_episode_file_path(ep, EpisodeFile.AUDIO)
             os.makedirs(os.path.dirname(episode_path), exist_ok=True)
             with open(episode_path, "w", encoding="utf-8") as f:
                 f.write("dummy content")
@@ -275,7 +299,9 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         # Simulate downloading episodes
         for episode in new_episodes:
             # Create audio file and metadata to simulate download
-            episode_path = manager.get_episode_audio_path(episode)
+            episode_path = manager.get_episode_file_path(
+                episode, EpisodeFile.AUDIO
+            )
             os.makedirs(os.path.dirname(episode_path), exist_ok=True)
             with open(episode_path, "w", encoding="utf-8") as f:
                 f.write("dummy content")

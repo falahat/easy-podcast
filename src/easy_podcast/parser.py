@@ -68,7 +68,7 @@ class PodcastParser:
             self.logger.error("Malformed XML detected")
             raise ValueError("Malformed XML detected")
 
-        podcast = self._create_podcast_from_feed(rss_url, feed_data)
+        podcast = self.create_podcast_from_feed(rss_url, feed_data)
 
         if podcast:
             self.logger.info(
@@ -79,7 +79,7 @@ class PodcastParser:
 
         return podcast
 
-    def _create_podcast_from_feed(
+    def create_podcast_from_feed(
         self, rss_url: str, feed_data: feedparser.FeedParserDict
     ) -> Podcast:
         """Create Podcast object from parsed feed data."""
@@ -106,7 +106,7 @@ class PodcastParser:
         self.logger.debug("Processing %d feed entries", len(feed_entries))
 
         for entry in feed_entries:
-            episode = self._parse_entry_to_episode(entry, podcast_guid)
+            episode = self.parse_entry_to_episode(entry, podcast_guid)
             if episode:
                 podcast.episodes.append(episode)
 
@@ -118,7 +118,7 @@ class PodcastParser:
 
         return podcast
 
-    def _parse_entry_to_episode(
+    def parse_entry_to_episode(
         self, entry: Dict[str, Any], podcast_guid: str = ""
     ) -> Optional[Episode]:
         """Convert feed entry to Episode object."""
