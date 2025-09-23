@@ -46,7 +46,6 @@ class TestPodcastManagerRSS(PodcastTestBase):
         mock_podcast = Podcast(
             title="Test Podcast",
             rss_url="http://test.com/rss",
-            safe_title="Test_Podcast",
             episodes=[mock_episode],
         )
         mock_parse_content.return_value = mock_podcast
@@ -86,7 +85,6 @@ class TestPodcastManagerRSS(PodcastTestBase):
         mock_podcast = Podcast(
             title="Empty Podcast",
             rss_url="http://test.com/rss",
-            safe_title="Empty_Podcast",
             episodes=[],
         )
         mock_parse_content.return_value = mock_podcast
@@ -113,7 +111,6 @@ class TestPodcastManagerRSS(PodcastTestBase):
         mock_podcast = Podcast(
             title="Unknown Podcast",
             rss_url="http://test.com/rss",
-            safe_title="Unknown_Podcast",
             episodes=[],
         )
         mock_parse_content.return_value = mock_podcast
@@ -143,7 +140,6 @@ class TestPodcastManagerRSS(PodcastTestBase):
         mock_podcast = Podcast(
             title="Test/Podcast\\With:Special*Chars",
             rss_url="http://test.com/rss",
-            safe_title="Test_Podcast_With_Special_Chars",
             episodes=[],
         )
         mock_parse_content.return_value = mock_podcast
@@ -190,7 +186,6 @@ class TestPodcastManagerRSS(PodcastTestBase):
         mock_podcast = Podcast(
             title="Test Podcast",
             rss_url="http://test.com/rss",
-            safe_title="Test_Podcast",
             episodes=[mock_episode],
         )
         mock_parse_content.return_value = mock_podcast

@@ -119,7 +119,6 @@ class Podcast:
 
     title: str
     rss_url: str
-    safe_title: str  # Sanitized title used for folder names
     episodes: list["Episode"] = field(default_factory=list)
     guid: str = ""  # RSS standard GUID field
 

@@ -60,12 +60,11 @@ class TestPodcast(unittest.TestCase):
         podcast = Podcast(
             title="Test Podcast",
             rss_url="http://test.com/rss",
-            safe_title="Test_Podcast",
         )
 
         self.assertEqual(podcast.title, "Test Podcast")
         self.assertEqual(podcast.rss_url, "http://test.com/rss")
-        self.assertEqual(podcast.safe_title, "Test_Podcast")
+        # safe_title field no longer exists - using GUID-based storage
         self.assertEqual(len(podcast.episodes), 0)
 
     def test_podcast_with_episodes(self) -> None:
@@ -79,7 +78,6 @@ class TestPodcast(unittest.TestCase):
         podcast = Podcast(
             title="Test Podcast",
             rss_url="http://test.com/rss",
-            safe_title="Test_Podcast",
             episodes=[episode],
         )
 
@@ -128,7 +126,6 @@ class TestPodcast(unittest.TestCase):
         podcast = Podcast(
             title="Test Podcast",
             rss_url="http://test.com/rss",
-            safe_title="Test_Podcast",
             guid="test-podcast-guid",
         )
 
@@ -143,7 +140,7 @@ class TestPodcast(unittest.TestCase):
 
         self.assertEqual(restored_podcast.title, "Test Podcast")
         self.assertEqual(restored_podcast.rss_url, "http://test.com/rss")
-        self.assertEqual(restored_podcast.safe_title, "Test_Podcast")
+        # safe_title field no longer exists - using GUID-based storage
         self.assertEqual(restored_podcast.guid, "test-podcast-guid")
         self.assertEqual(len(restored_podcast.episodes), 0)
 
@@ -158,7 +155,6 @@ class TestPodcast(unittest.TestCase):
         podcast = Podcast(
             title="Test Podcast",
             rss_url="http://test.com/rss",
-            safe_title="Test_Podcast",
             episodes=[episode],
             guid="test-podcast-guid",
         )

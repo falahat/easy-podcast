@@ -143,7 +143,7 @@ class EpisodeDownloader:
                 self._get_successfully_downloaded_episodes(downloads, summary)
             )
             self.repository.upsert_episodes(
-                podcast.title, successfully_downloaded
+                podcast.guid, successfully_downloaded
             )
 
         self._log_download_results(summary)
@@ -159,7 +159,7 @@ class EpisodeDownloader:
         downloads: List[tuple[Episode, str]] = []
         for episode in episodes:
             target_path = self.repository.get_episode_file_path(
-                podcast.title, episode, EpisodeFile.AUDIO
+                podcast.guid, episode, EpisodeFile.AUDIO
             )
             downloads.append((episode, target_path))
         return downloads

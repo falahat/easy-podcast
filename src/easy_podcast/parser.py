@@ -2,6 +2,7 @@
 RSS feed parsing functionality.
 """
 
+import hashlib
 import logging
 from typing import Any, Dict, Optional
 
@@ -9,7 +10,7 @@ import feedparser
 
 from .downloader import download_rss_from_url, load_rss_from_file
 from .models import Episode, Podcast
-from .utils import parse_duration_to_seconds, sanitize_filename
+from .utils import parse_duration_to_seconds
 
 
 class PodcastParser:
@@ -85,20 +86,18 @@ class PodcastParser:
         """Create Podcast object from parsed feed data."""
         feed_info = getattr(feed_data, "feed", {})
         podcast_title = feed_info.get("title", "Unknown Podcast")
-        safe_title = sanitize_filename(podcast_title)
 
-        # Create a GUID for the podcast - use RSS URL as a unique identifier
+        # Create a GUID for the podcast - hash RSS URL for safe directory name
         # In the future, this could be extracted from feed metadata
-        podcast_guid = rss_url
+        podcast_guid = hashlib.md5(rss_url.encode()).hexdigest()
 
         self.logger.debug(
-            "Creating podcast: '%s' (safe: '%s')", podcast_title, safe_title
+            "Creating podcast: '%s'", podcast_title
         )
 
         podcast = Podcast(
             title=podcast_title,
             rss_url=rss_url,
-            safe_title=safe_title,
             guid=podcast_guid,
         )
 

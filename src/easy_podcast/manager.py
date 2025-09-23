@@ -33,7 +33,7 @@ class PodcastManager:
         )
 
         # Ensure podcast directory exists
-        self.repository.ensure_podcast_dir_exists(self.podcast.title)
+        self.repository.ensure_podcast_dir_exists(self.podcast.guid)
 
     def get_podcast(self) -> Podcast:
         """Get currently loaded podcast."""
@@ -41,14 +41,14 @@ class PodcastManager:
 
     def get_podcast_data_dir(self) -> str:
         """Get the data directory for this podcast."""
-        return self.repository.get_podcast_dir(self.podcast.title)
+        return self.repository.get_podcast_dir(self.podcast.guid)
 
     def episode_file_exists(
         self, episode: Episode, file_spec: FileSpec
     ) -> bool:
         """Check if an episode file of the specified type exists."""
         return self.repository.episode_file_exists(
-            self.podcast.title, episode, file_spec
+            self.podcast.guid, episode, file_spec
         )
 
     def get_episode_file_path(
@@ -56,13 +56,13 @@ class PodcastManager:
     ) -> str:
         """Get the full path to an episode file of the specified type."""
         return self.repository.get_episode_file_path(
-            self.podcast.title, episode, file_spec
+            self.podcast.guid, episode, file_spec
         )
 
     def get_new_episodes(self) -> List[Episode]:
         """Get episodes that haven't been downloaded yet."""
         new_episodes = self.repository.filter_new_episodes(
-            self.podcast.title, self.podcast.episodes
+            self.podcast.guid, self.podcast.episodes
         )
 
         self.logger.info(

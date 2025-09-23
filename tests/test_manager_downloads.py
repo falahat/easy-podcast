@@ -5,6 +5,8 @@ Tests for PodcastManager download functionality.
 import os
 from unittest.mock import patch, MagicMock
 
+from easy_podcast.episode_downloader import DownloadSummary
+from easy_podcast.models import EpisodeFile
 from tests.base import PodcastTestBase
 from tests.utils import create_test_episode
 
@@ -30,7 +32,6 @@ class TestPodcastManagerDownloads(PodcastTestBase):
         manager = self.create_manager(test_podcast, test_podcast_dir)
 
         # Configure mock for success
-        from easy_podcast.models import EpisodeFile
         expected_path = manager.get_episode_file_path(
             episode, EpisodeFile.AUDIO
         )
@@ -74,7 +75,6 @@ class TestPodcastManagerDownloads(PodcastTestBase):
         result = manager.download_episodes([episode])
         # Result will show 0 successful, 0 skipped, 1 failed due to mock
         # failure
-        from easy_podcast.episode_downloader import DownloadSummary
 
         self.assertIsInstance(result, DownloadSummary)
         self.assertEqual(result.successful, 0)
@@ -82,7 +82,6 @@ class TestPodcastManagerDownloads(PodcastTestBase):
         self.assertEqual(result.failed, 1)
 
         # Verify the download function was called
-        from easy_podcast.models import EpisodeFile
         expected_path = manager.get_episode_file_path(
             episode, EpisodeFile.AUDIO
         )
@@ -152,7 +151,6 @@ class TestPodcastManagerDownloads(PodcastTestBase):
         manager = self.create_manager(test_podcast, test_podcast_dir)
 
         # Configure mock for success
-        from easy_podcast.models import EpisodeFile
         expected_path = manager.get_episode_file_path(
             episode, EpisodeFile.AUDIO
         )
@@ -186,7 +184,6 @@ class TestPodcastManagerDownloads(PodcastTestBase):
 
         # Mock download_episode_file to return existing file
         # Create the episode file to simulate it already exists
-        from easy_podcast.models import EpisodeFile
         episode_path = manager.get_episode_file_path(
             episode, EpisodeFile.AUDIO
         )

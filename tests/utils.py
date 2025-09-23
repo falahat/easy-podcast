@@ -49,7 +49,7 @@ def create_test_episode(**kwargs: Any) -> Episode:
 
 def create_test_episodes(count: int, **base_kwargs: Any) -> List[Episode]:
     """Create multiple test episodes with sequential IDs."""
-    episodes = []
+    episodes: List[Episode] = []
     for i in range(count):
         episode_kwargs = base_kwargs.copy()
         episode_kwargs.setdefault("id", f"episode_{i+1}")
@@ -62,7 +62,7 @@ class MockTranscriberContext:
     """Context manager for consistent transcriber mocking."""
 
     def __init__(self, **params: Any):
-        self.params = {
+        self.params: Dict[str, Any] = {
             "model_size": "large-v2",
             "device": "cpu",
             "compute_type": "int8",

@@ -52,35 +52,75 @@ easy_podcast "https://example.com/podcast/rss.xml" --no-progress
 
 ### Python API
 
+#### 1. Download a Podcast by RSS URL
+
 ```python
-from easy_podcast.manager import PodcastManager
+from easy_podcast.factory import create_manager_from_rss
 
-# Create manager from RSS URL (downloads and parses automatically)
-manager = PodcastManager.from_rss_url("https://example.com/podcast/rss.xml")
-
+manager = create_manager_from_rss("https://example.com/podcast/rss.xml")
 if manager:
-    podcast = manager.get_podcast()
-    print(f"Podcast: {podcast.title}")
-    
-    # Get new episodes to download
-    new_episodes = manager.get_new_episodes()
-    print(f"Found {len(new_episodes)} new episodes")
-    
-    # Download episodes with progress tracking
-    successful, skipped, failed = manager.download_episodes(new_episodes)
-    print(f"Downloaded: {successful}, Skipped: {skipped}, Failed: {failed}")
+    print(f"Loaded: {manager.get_podcast().title}")
+```
+
+#### 2. Basic Podcast Fields
+
+```python
+podcast = manager.get_podcast()
+
+print(f"Title: {podcast.title}")
+print(f"Episodes: {len(podcast.episodes)}")
+print(f"Data dir: {manager.get_podcast_data_dir()}")
+```
+
+#### 3. Inspect an Episode
+
+```python
+from easy_podcast.models import EpisodeFile
+
+episode = podcast.episodes[0]
+print(f"Episode: {episode.title}")
+print(f"Duration: {episode.duration_seconds}s")
+print(f"Size: {episode.size} bytes")
+
+# Check if files exist
+audio_exists = manager.episode_file_exists(episode, EpisodeFile.AUDIO)
+audio_path = manager.get_episode_file_path(episode, EpisodeFile.AUDIO)
+print(f"Downloaded: {audio_exists} -> {audio_path}")
+```
+
+#### 4. Download a Single Episode
+
+```python
+new_episodes = manager.get_new_episodes()
+if new_episodes:
+    result = manager.download_episodes([new_episodes[0]])
+    print(f"Downloaded: {result.successful}, Failed: {result.failed}")
+```
+
+#### 5. Download Multiple Episodes
+
+```python
+new_episodes = manager.get_new_episodes()
+print(f"Found {len(new_episodes)} new episodes")
+
+if new_episodes:
+    result = manager.download_episodes(new_episodes)
+    print(f"Results: {result.successful} downloaded, {result.skipped} skipped, {result.failed} failed")
 ```
 
 ### Working with Existing Podcast Data
 
 ```python
-# Load manager from existing podcast folder
-manager = PodcastManager.from_podcast_folder("data/My Podcast/")
+from easy_podcast.factory import create_manager_from_storage
+
+# Load existing podcast by title
+manager = create_manager_from_storage("My Podcast", "./data")
 
 if manager:
-    # Continue downloading new episodes
     new_episodes = manager.get_new_episodes()
-    manager.download_episodes(new_episodes)
+    if new_episodes:
+        result = manager.download_episodes(new_episodes)
+        print(f"Downloaded {result.successful} new episodes")
 ```
 
 ## Data Storage Structure
@@ -90,15 +130,16 @@ Podcast data is organized in a clear directory structure:
 ```
 data/
 └── [Sanitized Podcast Name]/
+    ├── podcast.json        # Podcast metadata (title, URL, etc.)
     ├── episodes.jsonl      # Episode metadata (one JSON object per line)
     ├── rss.xml            # Cached RSS feed
-    └── downloads/         # Downloaded audio files
-        ├── episode1.mp3
-        ├── episode2.mp3
-        └── ...
+    ├── episode1.mp3       # Downloaded audio files (named by episode ID)
+    ├── episode2.mp3
+    ├── episode1_transcript.json  # Transcript files (when available)
+    └── episode2_transcript.json
 ```
 
-**Important**: Episode objects store filenames only (e.g., `"727175.mp3"`), not full paths. Use `manager.get_episode_audio_path(episode)` to get complete file paths.
+**Important**: Episode objects store filenames only (e.g., `"test123.mp3"`), not full paths. Use `manager.get_episode_file_path(episode, EpisodeFile.AUDIO)` to get complete file paths for audio files, or `manager.get_episode_file_path(episode, EpisodeFile.TRANSCRIPT)` for transcript files.
 
 ## Development
 

@@ -65,7 +65,6 @@ class PodcastTestBase(unittest.TestCase):
         defaults: Dict[str, Any] = {
             "title": "Test Podcast",
             "rss_url": "http://test.com/rss",
-            "safe_title": "Test_Podcast",
             "episodes": [],
         }
         defaults.update(kwargs)

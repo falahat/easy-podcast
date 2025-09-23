@@ -44,7 +44,7 @@ class TestPodcastParser(PodcastTestBase):
         **kwargs: Any,
     ) -> Dict[str, Any]:
         """Create mock feed entry for testing."""
-        entry = {
+        entry: Dict[str, Any] = {
             "supercast_episode_id": episode_id,
             "title": title,
             "published": "2023-01-01",
@@ -232,7 +232,7 @@ class TestPodcastParser(PodcastTestBase):
             self.assertIsInstance(result, Podcast)
             self.assertEqual(result.title, "My Podcast")
             self.assertEqual(result.rss_url, "http://example.com/rss")
-            self.assertEqual(result.safe_title, "My Podcast")
+            # safe_title field no longer exists - using GUID-based storage
             self.assertEqual(len(result.episodes), 1)
             self.assertEqual(result.episodes[0], mock_episode)
 
@@ -247,7 +247,7 @@ class TestPodcastParser(PodcastTestBase):
         )
         assert result is not None
         self.assertEqual(result.title, "Unknown Podcast")
-        self.assertEqual(result.safe_title, "Unknown Podcast")
+        # safe_title field no longer exists - using GUID-based storage
 
     def test_create_podcast_from_feed_no_entries(self) -> None:
         """Test podcast creation with no entries."""
@@ -366,7 +366,7 @@ class TestPodcastParser(PodcastTestBase):
 
     def test_parse_entry_to_episode_defaults(self) -> None:
         """Test episode parsing with minimal data and defaults."""
-        entry = {
+        entry: Dict[str, Any] = {
             "supercast_episode_id": "123",
             "enclosures": [
                 {"type": "audio/mpeg", "href": "http://example.com/test.mp3"}

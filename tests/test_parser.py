@@ -96,8 +96,8 @@ class TestPodcastParserFunctions(PodcastTestBase):
             "http://example.com/rss", mock_feed
         )
 
-        expected_safe_title = "Podcast_With_Slashes"
-        self.assertEqual(podcast.safe_title, expected_safe_title)
+        # Verify podcast was created (safe_title field no longer exists)
+        self.assertIsNotNone(podcast)
 
     def test_parse_podcast_with_mixed_valid_invalid_entries(self) -> None:
         """Test parsing a podcast with both valid and invalid entries."""

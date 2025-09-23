@@ -70,33 +70,33 @@ def create_manager_from_rss(
     repository.save_podcast_metadata(podcast)
 
     # Save episodes
-    repository.save_episodes(podcast.title, podcast.episodes)
+    repository.save_episodes(podcast.guid, podcast.episodes)
 
     # Save RSS cache
-    repository.save_rss_cache(podcast.title, rss_content)
+    repository.save_rss_cache(podcast.guid, rss_content)
 
     # Create and return manager
     return _create_manager(podcast, repository, downloader)
 
 
 def create_manager_from_storage(
-    podcast_title: str, data_dir: str = "./data"
+    podcast_guid: str, data_dir: str = "./data"
 ) -> Optional[PodcastManager]:
     """Create PodcastManager from existing storage."""
     logger = logging.getLogger(__name__)
-    logger.info("Loading PodcastManager from storage: %s", podcast_title)
+    logger.info("Loading PodcastManager from storage: %s", podcast_guid)
 
     # Create dependencies
     _storage, repository, downloader = _create_dependencies(data_dir)
 
     # Load podcast metadata
-    podcast = repository.load_podcast_metadata(podcast_title)
+    podcast = repository.load_podcast_metadata(podcast_guid)
     if not podcast:
-        logger.error("Could not load podcast metadata for %s", podcast_title)
+        logger.error("Could not load podcast metadata for %s", podcast_guid)
         return None
 
     # Load episodes
-    episodes = repository.load_episodes(podcast_title)
+    episodes = repository.load_episodes(podcast_guid)
     podcast.episodes = episodes
 
     # Create and return manager

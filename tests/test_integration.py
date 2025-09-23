@@ -99,7 +99,7 @@ class TestIntegration(PodcastTestBase):
         self.assertEqual(episode.id, "test")
 
         podcast = Podcast(
-            title="Test", rss_url="http://test.com", safe_title="Test"
+            title="Test", rss_url="http://test.com"
         )
         self.assertEqual(podcast.title, "Test")
 
@@ -116,7 +116,7 @@ class TestIntegration(PodcastTestBase):
         try:
             # Create a test podcast for manager creation
             test_podcast = Podcast(
-                title="Test", rss_url="http://test.com", safe_title="Test"
+                title="Test", rss_url="http://test.com"
             )
             manager = self.create_manager(test_podcast, self.test_dir)
             self.assertIsNotNone(manager)

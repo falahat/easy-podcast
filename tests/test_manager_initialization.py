@@ -3,6 +3,7 @@ Tests for PodcastManager initialization and factory methods.
 """
 
 import os
+import requests
 from typing import Any, Dict, List
 from unittest.mock import Mock, patch
 
@@ -28,7 +29,6 @@ class TestPodcastManagerInitialization(PodcastTestBase):
         test_podcast = Podcast(
             title="Test Podcast",
             rss_url="http://test.com/rss",
-            safe_title="Test_Podcast",
             episodes=[],
         )
 
@@ -75,10 +75,10 @@ class TestPodcastManagerInitialization(PodcastTestBase):
             )
             self.assertIsNotNone(initial_manager)
             assert initial_manager is not None  # Type hint for mypy
-            podcast_title = initial_manager.podcast.title
+            podcast_guid = initial_manager.podcast.guid
 
         # Now test loading from existing storage
-        manager = create_manager_from_storage(podcast_title, self.test_dir)
+        manager = create_manager_from_storage(podcast_guid, self.test_dir)
 
         # Verify the manager was created successfully
         self.assertIsNotNone(manager, "Manager should be created successfully")
@@ -103,7 +103,7 @@ class TestPodcastManagerInitialization(PodcastTestBase):
             )
             # Verify podcast directory structure exists
             podcast_dir = manager.repository.get_podcast_dir(
-                manager.podcast.title
+                manager.podcast.guid
             )
             self.assertTrue(
                 os.path.exists(podcast_dir),
@@ -148,10 +148,10 @@ class TestPodcastManagerInitialization(PodcastTestBase):
             )
             self.assertIsNotNone(initial_manager)
             assert initial_manager is not None
-            podcast_title = initial_manager.podcast.title
+            podcast_guid = initial_manager.podcast.guid
 
         # Now test loading from existing storage
-        manager = create_manager_from_storage(podcast_title, self.test_dir)
+        manager = create_manager_from_storage(podcast_guid, self.test_dir)
 
         # Verify the manager was created successfully even with no episodes
         self.assertIsNotNone(
@@ -198,7 +198,6 @@ class TestPodcastManagerInitialization(PodcastTestBase):
     @patch("requests.get")
     def test_from_rss_url_download_failure(self, mock_get: Mock) -> None:
         """Test from_rss_url when RSS download fails."""
-        import requests
 
         mock_get.side_effect = requests.exceptions.ConnectionError(
             "Network error"

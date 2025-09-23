@@ -3,6 +3,7 @@ Tests for the CLI module.
 """
 
 import os
+import shutil
 import sys
 import tempfile
 from io import StringIO
@@ -30,7 +31,6 @@ class TestCLI:
     def teardown_method(self) -> None:
         """Clean up test environment."""
         self.env_patcher.stop()
-        import shutil
 
         if hasattr(self, "test_dir") and os.path.exists(self.test_dir):
             shutil.rmtree(self.test_dir)

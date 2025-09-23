@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 from unittest.mock import Mock, patch
 
 from easy_podcast.factory import create_manager_from_rss
-from easy_podcast.models import Podcast  # Keep for remaining instances
+from easy_podcast.models import EpisodeFile, Podcast
 
 from tests.base import PodcastTestBase
 from tests.utils import create_test_episode
@@ -20,7 +20,6 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         """Test get_new_episodes with an empty podcast."""
         test_podcast = self.create_test_podcast(
             title="Empty Podcast",
-            safe_title="Empty_Podcast",
             episodes=[],  # Empty episodes list
         )
 
@@ -46,7 +45,6 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         test_podcast_dir = self.test_dir
         manager = self.create_manager(test_podcast, test_podcast_dir)
 
-        from easy_podcast.models import EpisodeFile
         expected_path = manager.get_episode_file_path(
             episode, EpisodeFile.AUDIO
         )
@@ -72,7 +70,6 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         manager = self.create_manager(test_podcast, test_podcast_dir)
 
         # File doesn't exist initially
-        from easy_podcast.models import EpisodeFile
         self.assertFalse(
             manager.episode_file_exists(episode, EpisodeFile.AUDIO)
         )
@@ -106,7 +103,6 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         test_podcast_dir = self.test_dir
         manager = self.create_manager(test_podcast, test_podcast_dir)
 
-        from easy_podcast.models import EpisodeFile
         expected_path = manager.get_episode_file_path(
             episode, EpisodeFile.TRANSCRIPT
         )
@@ -128,7 +124,6 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         test_podcast = Podcast(
             title="Test Podcast",
             rss_url="http://test.com/rss",
-            safe_title="Test_Podcast",
             episodes=[episode],
         )
 
@@ -136,7 +131,6 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         manager = self.create_manager(test_podcast, test_podcast_dir)
 
         # File doesn't exist initially
-        from easy_podcast.models import EpisodeFile
         self.assertFalse(
             manager.episode_file_exists(episode, EpisodeFile.TRANSCRIPT)
         )
@@ -206,7 +200,6 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         mock_podcast = Podcast(
             title="Test Podcast",
             rss_url="http://test.com/rss",
-            safe_title="Test_Podcast",
             episodes=mock_episodes,
         )
         mock_parse_content.return_value = mock_podcast
@@ -221,7 +214,6 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         self.assertEqual(len(new_episodes), 2)
 
         # Simulate successful download by creating files in new structure
-        from easy_podcast.models import EpisodeFile
         for ep in new_episodes:
             # Create dummy audio files to simulate download
             episode_path = manager.get_episode_file_path(ep, EpisodeFile.AUDIO)
@@ -265,7 +257,6 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         mock_podcast_updated = Podcast(
             title="Test Podcast",
             rss_url="http://test.com/rss",
-            safe_title="Test_Podcast",
             episodes=mock_episodes_updated,
         )
         mock_parse_content.return_value = mock_podcast_updated
@@ -358,7 +349,6 @@ class TestPodcastManagerEpisodes(PodcastTestBase):
         mock_podcast_updated = Podcast(
             title="Test Podcast",
             rss_url="http://test.com/rss",
-            safe_title="Test_Podcast",
             episodes=mock_episodes_updated,
         )
         mock_parse_content.return_value = mock_podcast_updated
